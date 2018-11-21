@@ -210,10 +210,10 @@ class MainWindow(QtWidgets.QMainWindow):
         y1 = pts[p1][1]
         y2 = pts[p2][1]
 
-        return math.ceil(math.sqrt( #pythagoras
+        return math.sqrt( #pythagoras
             math.pow( x2 - x1, 2 ) + 
             math.pow( y2 - y1, 2 )
-        ))
+        )
 
     def addPoint(self):
         # work out where the largest gap occurs and insert the new point in the middle
