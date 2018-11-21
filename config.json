@@ -1,6 +1,6 @@
 {
     "card": "0",
-    "interval": "2000",
+    "interval": "500",
     "path": "/sys/class/drm/card0/device/hwmon/hwmon0/",
     "points": [
         [
@@ -8,16 +8,20 @@
             0
         ],
         [
-            28,
-            16
+            32,
+            14
         ],
         [
             47,
             30
         ],
         [
-            59,
-            58
+            56,
+            51
+        ],
+        [
+            62,
+            70
         ],
         [
             65,

@@ -60,6 +60,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.initPlotWidget()
         self.initTimer()
+        self.ui.spinBoxInterval.setValue(int(self.myConfig[CONFIG_INTERVAL_VAR]))
 
     def initPlotWidget(self):
         pg.setConfigOptions(antialias=True)
@@ -187,9 +188,9 @@ class MainWindow(QtWidgets.QMainWindow):
             y2 = pts[i+1][1]
 
             if (( temp >= x1 ) and ( temp < x2)):
-                sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1
+                sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 + 3
                 output = int((sFan / 100) * 255)
-                #print( "Fan speed in range: %d-%d=%d (%d)" % (y1, y2, sFan, output))
+                print( "Fan speed in range: %d-%d=%d (%d)" % (y1, y2, sFan, output))
                 self.setCtlValue(str(output))
 
     def getLineLength(self, p1, p2):
