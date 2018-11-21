@@ -55,7 +55,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.spinBoxInterval.valueChanged.connect(self.setInterval)
         self.ui.pushButtonAdd.clicked.connect(self.addPoint)
         self.ui.pushButtonRemove.clicked.connect(self.removePoint)
-        self.ui.pushButtonEnable.clicked.connect(self.setCtlEnabled)
+        self.ui.pushButtonEnable.clicked.connect(self.setCtlOwner)
         self.ui.pushButtonSave.clicked.connect(self.configSave)
         self.ui.pushButtonClose.clicked.connect(self.close)
 
@@ -70,6 +70,8 @@ class MainWindow(QtWidgets.QMainWindow):
         gv.setMenuEnabled(False)
         gv.setAspectLocked(True)
         gv.showGrid(x=True, y=True, alpha=0.25)
+        gv.getAxis('bottom').setTickSpacing(10, 1)
+        gv.getAxis('left').setTickSpacing(10, 5)
         gv.hideButtons()
         gv.setLimits(
             xMin = VIEW_MIN,
@@ -97,10 +99,15 @@ class MainWindow(QtWidgets.QMainWindow):
         lineLabelCurrTemp.setAngle(90)
         lineLabelCurrFan.setAngle(0)
 
+        scatterItem = pg.ScatterPlotItem(name='tMax', pen=pg.mkPen('r'))
+        scatterItem.setData([self.getGPUTempCrit()], [100], symbol='t')
+
         gv.addItem(graph)
         gv.addItem(lineCurrTemp)
         gv.addItem(lineCurrFan)
         gv.addItem(textLabelXY)
+        gv.addItem(scatterItem)
+
     def initTimer(self):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timerTick)
@@ -137,7 +144,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         try:
             self.setPerms(path)
-        try:
             with open(path, "w") as file:
                 file.write(str(value))
         except:
@@ -174,8 +180,13 @@ class MainWindow(QtWidgets.QMainWindow):
     def getGPUFanPercent(self):
         fIn = self.getHwmonInt(HWMON_PWM_INPUT)
         fMax = self.getGPUPWMMax()
-        return int((fIn / fMax) * 100)
-    def setFanSpeedAdjustments(self, temp):
+        fRet = int((fIn / fMax) * 100)
+        #print( "Get fan speed: %d%% (%d)" % (fRet, fIn))
+        return fRet
+
+    def getFanSpeedFromPlot(self):
+        
+        temp = self.getGPUTemp()
         # given gpuTemp we use some trig to 
         # calculate output fan speed as a 
         # percentage of the maximum 255
@@ -199,10 +210,14 @@ class MainWindow(QtWidgets.QMainWindow):
             if (( temp >= x1 ) and ( temp < x2)):
                 sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 
                 output = int((sFan / 100) * self.getGPUPWMMax())
-                #print( "Fan speed in range: %d-%d=%d (%d)" % (y1, y2, sFan, output))
-                self.setCtlValue(str(output))
                 break
 
+        return output
+
+    def setFanSpeedAdjustments(self):
+        output = self.getFanSpeedFromPlot()
+        self.setCtlValue(str(output))
+        
     def getLineLength(self, p1, p2):
         #FIXME: needs bounds checks
         pts = self.getGraphItem(0).pos
@@ -283,6 +298,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
         gpuTemp = self.getGPUTemp()
+        #fanSpeed = (self.getFanSpeedFromPlot() / 255) * 100
         fanSpeed = self.getGPUFanPercent()
         ctlStatus = self.getHwmonStatus()
 
@@ -295,7 +311,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.getGraphItem('currFan').setValue(fanSpeed)
         
         if (ctlStatus == HWMON_STATUS_MAN):
-            self.setFanSpeedAdjustments(gpuTemp)
+            self.setFanSpeedAdjustments()
         
     def configSave(self):
         
