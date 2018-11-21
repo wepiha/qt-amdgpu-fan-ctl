@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/wepiha/Documents/amdgpuproautofans/mainwindow.ui'
+# Form implementation generated from reading ui file '/home/wepiha/Documents/qt-amdgpu-fan-ctl/mainwindow.ui'
 #
 # Created by: PyQt5 UI code generator 5.11.2
 #
@@ -127,7 +127,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "AMDGPUPRO Auto Fan"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "amdgpu-fan-ctl"))
         self.labelGPUforCurrentProfileLabel.setText(_translate("MainWindow", "GPU for Current Profile:"))
         self.comboBoxCardIndex.setItemText(0, _translate("MainWindow", "0"))
         self.labelFanProfileLabel.setText(_translate("MainWindow", "Fan Profile:"))

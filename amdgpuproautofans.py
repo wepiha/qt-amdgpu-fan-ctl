@@ -17,6 +17,7 @@ CONFIG_INDEX_VAR = "${index}"
 CONFIG_INTERVAL_VAR = "interval"
 
 HWMON_TEMP1_INPUT = "temp1_input"
+HWMON_TEMP1_CRIT = "temp1_crit"
 HWMON_PWM_INPUT = "pwm1"
 HWMON_PWM_MAX = "pwm1_max"
 HWMON_PWM_ENABLE = "pwm1_enable"
@@ -60,7 +61,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.initPlotWidget()
         self.initTimer()
-        self.ui.spinBoxInterval.setValue(int(self.myConfig[CONFIG_INTERVAL_VAR]))
 
     def initPlotWidget(self):
         pg.setConfigOptions(antialias=True)
@@ -107,8 +107,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timer.start()
         self.setInterval(self.myConfig[CONFIG_INTERVAL_VAR])
 
-    def setPerms(self, card):
-        os.system('python3 ' + os.getcwd() + '/helpers/setperms.py ' + card)
+    def setPerms(self, path):
+        os.system('python3 ' + os.getcwd() + '/helpers/setperms.py ' + path)
 
     def closeEvent(self, *args, **kwargs):
         if (self.getHwmonStatus() == HWMON_STATUS_MAN):
@@ -148,6 +148,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
         self.timer.setInterval(int(value))
 
+        if ( self.ui.spinBoxInterval.value != value ):
+            self.ui.spinBoxInterval.setValue(int(value))
+
     def getHwmonInt(self, path):
         try:
             file = open(self.myConfig[CONFIG_PATH_VAR] + path, "r")
@@ -162,14 +165,19 @@ class MainWindow(QtWidgets.QMainWindow):
     def getGPUTemp(self):
         tIn = self.getHwmonInt(HWMON_TEMP1_INPUT)
         return int(tIn / 1000)
+    def getGPUTempCrit(self):
+        tCrit = self.getHwmonInt(HWMON_TEMP1_CRIT)
+        return int(tCrit / 1000)
+    def getGPUPWMMax(self):
+        return self.getHwmonInt(HWMON_PWM_MAX)
     def getGPUFanPercent(self):
         fIn = self.getHwmonInt(HWMON_PWM_INPUT)
-        fMax = self.getHwmonInt(HWMON_PWM_MAX)
+        fMax = self.getGPUPWMMax()
         return int((fIn / fMax) * 100)
     def setFanSpeedAdjustments(self, temp):
         # given gpuTemp we use some trig to 
         # calculate output fan speed as a 
-        # percentage of the maximum (255)
+        # percentage of the maximum 255
         #
         #       +----.(x2,y2)
         #       |   /
@@ -179,7 +187,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #       .
         #      (x1,y1)
         #
-        pts = self.ui.graphicsView.plotItem.items[0].pos
+        pts = self.getGraphItem(0).pos
 
         for i in range(0, len(pts) - 1):
             x1 = pts[i][0]
@@ -189,13 +197,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if (( temp >= x1 ) and ( temp < x2)):
                 sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 + 3
-                output = int((sFan / 100) * 255)
-                print( "Fan speed in range: %d-%d=%d (%d)" % (y1, y2, sFan, output))
+                output = int((sFan / 100) * self.getGPUPWMMax())
+                #print( "Fan speed in range: %d-%d=%d (%d)" % (y1, y2, sFan, output))
                 self.setCtlValue(str(output))
 
     def getLineLength(self, p1, p2):
         #FIXME: needs bounds checks
-        pts = self.ui.graphicsView.plotItem.items[0].pos
+        pts = self.getGraphItem(0).pos
         
         x1 = pts[p1][0]
         x2 = pts[p2][0]
@@ -209,7 +217,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def addPoint(self):
         # work out where the largest gap occurs and insert the new point in the middle
-        pts = self.ui.graphicsView.plotItem.items[0].pos
+        pts = self.getGraphItem(0).pos
         
         inspos = -1
         length = 0
@@ -234,7 +242,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setGraphData(flat)
     def removePoint(self):
-        pts = self.ui.graphicsView.plotItem.items[0].pos
+        pts = self.getGraphItem(0).pos
         
         if (len(pts) == 2):
             return
@@ -257,12 +265,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setGraphData(self, data):
         self.myConfig[CONFIG_POINT_VAR] = data
-        self.ui.graphicsView.plotItem.items[0].setData(pos=np.stack(data))
-
-    def timerTick(self):
-        gp = self.ui.graphicsView.plotItem.items
+        self.getGraphItem(0).setData(pos=np.stack(data))
+    def getGraphItem(self, name):
+        for item in self.ui.graphicsView.plotItem.items:
+            if (hasattr(item, '_name')) and (item._name == name):
+                return item
+        # always return something
+        return self.ui.graphicsView.plotItem.items[0]
         
-        self.myConfig[CONFIG_POINT_VAR] = gp[0].pos.reshape(gp[0].pos.shape).tolist()
+    def getGraphFlatList(self):
+        shape = self.getGraphItem(None).pos.shape
+        return self.getGraphItem(None).pos.reshape(shape).tolist()
+        
+    def timerTick(self):
+        self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
         gpuTemp = self.getGPUTemp()
         fanSpeed = self.getGPUFanPercent()
@@ -273,8 +289,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelFanProfileStatus.setText(ctlStatus)
 
         # move InfiniteLines
-        gp[1].setValue(gpuTemp)
-        gp[2].setValue(fanSpeed)
+        self.getGraphItem('currTemp').setValue(gpuTemp)
+        self.getGraphItem('currFan').setValue(fanSpeed)
         
         if (ctlStatus == HWMON_STATUS_MAN):
             self.setFanSpeedAdjustments(gpuTemp)
@@ -287,7 +303,6 @@ class MainWindow(QtWidgets.QMainWindow):
             print("Saved %s: %s" % (CONFIG_FILE, self.myConfig))
         except:
             print("Failed to save config!")
-        
     def configLoad(self):
         conf = DEFAULTCONFIG
         
