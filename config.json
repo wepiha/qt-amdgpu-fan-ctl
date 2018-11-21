@@ -1,1 +1,27 @@
-{"path": "/sys/class/drm/card0/device/hwmon/hwmon0/", "card": "0", "points": [[0, 0], [39, 0], [40, 40], [65, 100]], "interval": "2500"}
+{
+    "card": "0",
+    "interval": "2000",
+    "path": "/sys/class/drm/card0/device/hwmon/hwmon0/",
+    "points": [
+        [
+            0,
+            0
+        ],
+        [
+            28,
+            16
+        ],
+        [
+            47,
+            30
+        ],
+        [
+            59,
+            58
+        ],
+        [
+            65,
+            100
+        ]
+    ]
+}
