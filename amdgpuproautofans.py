@@ -112,9 +112,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, *args, **kwargs):
         if (self.getHwmonStatus() == HWMON_STATUS_MAN):
-            self.setCtlEnabled(False)
+            self.setCtlOwner(False)
 
-    def setCtlEnabled(self, value):
+    def setCtlOwner(self, value):
         path = self.myConfig[CONFIG_PATH_VAR] + HWMON_PWM_ENABLE
         
         self.setPerms(path)
@@ -122,9 +122,9 @@ class MainWindow(QtWidgets.QMainWindow):
             with open(path, "w") as file:
                 file.write("1" if (value) else "2")
         except:
-            print("Failed to setControlEnabled!")
+            print("Failed to setCtlOwner!")
         finally:
-            print("setControlEnabled: " + self.getHwmonStatus() )
+            print("setCtlOwner: " + self.getHwmonStatus() )
     def setCtlValue(self, value):
         path = self.myConfig[CONFIG_PATH_VAR] + HWMON_PWM_INPUT
 
@@ -135,14 +135,15 @@ class MainWindow(QtWidgets.QMainWindow):
         
         lastCtlValue = value
 
-        self.setPerms(path)
+        try:
+            self.setPerms(path)
         try:
             with open(path, "w") as file:
                 file.write(str(value))
         except:
-            print("Failed to setControlValue!")
+            print("Failed to setCtlValue!")
         finally:
-            print("setControlValue: " + str(value) )
+            print("setCtlValue: " + str(value) )
 
     def setInterval(self, value):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
@@ -196,10 +197,11 @@ class MainWindow(QtWidgets.QMainWindow):
             y2 = pts[i+1][1]
 
             if (( temp >= x1 ) and ( temp < x2)):
-                sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 + 3
+                sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 
                 output = int((sFan / 100) * self.getGPUPWMMax())
                 #print( "Fan speed in range: %d-%d=%d (%d)" % (y1, y2, sFan, output))
                 self.setCtlValue(str(output))
+                break
 
     def getLineLength(self, p1, p2):
         #FIXME: needs bounds checks
