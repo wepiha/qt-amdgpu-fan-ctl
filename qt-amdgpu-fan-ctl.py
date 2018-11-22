@@ -17,6 +17,7 @@ CONFIG_CARD_VAR = "card"
 CONFIG_POINT_VAR = "points"
 CONFIG_INDEX_VAR = "${index}"
 CONFIG_INTERVAL_VAR = "interval"
+CONFIG_LOGGING_VAR = "logging"
 
 HWMON_TEMP1_INPUT = "temp1_input"
 HWMON_TEMP1_CRIT = "temp1_crit"
@@ -40,7 +41,8 @@ DEFAULTCONFIG = {
         (40, 40),
         (65, 100)
     ),
-    CONFIG_INTERVAL_VAR : "2500"
+    CONFIG_INTERVAL_VAR : "2500",
+    CONFIG_LOGGING_VAR : False
 }
 
 lastCardIndex = 0
