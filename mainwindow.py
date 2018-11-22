@@ -12,6 +12,9 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(651, 638)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap("media/amd.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        MainWindow.setWindowIcon(icon)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.centralwidget)
@@ -144,6 +147,6 @@ class Ui_MainWindow(object):
         self.pushButtonEnable.setText(_translate("MainWindow", "Enable"))
         self.pushButtonSave.setText(_translate("MainWindow", "Save"))
         self.pushButtonClose.setText(_translate("MainWindow", "Close"))
-        self.plainTextEdit.setPlainText(_translate("MainWindow", "WARNING: THIS SOFTWARE DOES NOT INCLUDE A WARRANTY OF ANY KIND. ENABLE MANUAL FAN CONTROL AT YOUR OWN RISK. YOU HAVE BEEN WARNED! Also note that many devices will limit the lowest possible fan speed and may not allow for control below that threshold."))
+        self.plainTextEdit.setPlainText(_translate("MainWindow", "WARNING: THIS SOFTWARE DOES NOT INCLUDE A WARRANTY OF ANY KIND. ENABLE MANUAL FAN CONTROL AT YOUR OWN RISK. YOU HAVE BEEN WARNED! Also note that many devices will limit the lowest possible fan speed and may not allow for control below that threshold. Manual fan speeds may be subject to hardware adjustments that appear to differ slightly from the graph above."))
 
 from pyqtgraph import PlotWidget
