@@ -110,7 +110,7 @@ class MainWindow(QtWidgets.QMainWindow):
         gv.addItem(lineCurrTemp)
         gv.addItem(lineCurrFan)
         gv.addItem(textLabelXY)
-        gv.addItem(scatterItem)
+        #gv.addItem(scatterItem)
 
     def initTimer(self):
         self.timer = QtCore.QTimer()
