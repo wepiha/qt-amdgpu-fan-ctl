@@ -12,6 +12,11 @@ GNU GPLv3
 You must have SUDO abilities, and NOPASSWD:ALL for sudoers
 > $USER ALL=(ALL) NOPASSWD:ALL
 
+OR
+
+Run the script as root
+> sudo <script.py>
+
 ### Basic functionality:
 - Set GPU fan curve using GUI
 - Near-unlimited control points
