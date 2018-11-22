@@ -4,8 +4,16 @@ from os import stat
 from pwd import getpwuid
 import getpass
 
-TMP_FILE = "file.tmp"
+#
+# setperms.py
+# 
+#  Spawns a subprocess of this script as root to change ownership of a file
+#   to allow the current user to write to the file
+#
+#
 
+
+TMP_FILE = "file.tmp"
 
 if (len(sys.argv) == 1):
     print("Usage: %s PATH" % (sys.argv[0]))
