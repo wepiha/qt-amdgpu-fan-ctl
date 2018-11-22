@@ -15,7 +15,7 @@ You must have SUDO abilities, and NOPASSWD:ALL for sudoers
 OR
 
 Run the script as root
-> sudo <script.py>
+> sudo python3 ./qt-amdgpu-fan-ctl.py
 
 ### Basic functionality:
 - Set GPU fan curve using GUI
