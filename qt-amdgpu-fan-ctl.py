@@ -119,7 +119,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setInterval(self.myConfig[CONFIG_INTERVAL_VAR])
 
     def setPerms(self, path):
-        os.system('python3 ' + os.getcwd() + '/helpers/setperms.py ' + path)
+        os.system('python3 ' + os.getcwd() + '/common/setperms.py ' + path)
 
     def closeEvent(self, *args, **kwargs):
         if (self.getHwmonStatus() == HWMON_STATUS_MAN):
