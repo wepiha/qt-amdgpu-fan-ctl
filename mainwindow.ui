@@ -153,6 +153,13 @@
        </widget>
       </item>
       <item>
+       <widget class="QCheckBox" name="checkBoxEnableLogging">
+        <property name="text">
+         <string>Enable Logging</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer_3">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -160,7 +167,7 @@
         <property name="sizeHint" stdset="0">
          <size>
           <width>40</width>
-          <height>20</height>
+          <height>18</height>
          </size>
         </property>
        </spacer>
