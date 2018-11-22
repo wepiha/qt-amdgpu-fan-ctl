@@ -192,13 +192,14 @@ class MainWindow(QtWidgets.QMainWindow):
         # given gpuTemp we use some trig to 
         # calculate output fan speed as a 
         # percentage of the maximum 255
-        #
-        #       +----.(x2,y2)
-        #       |   /
-        # ---------+------------ output
+        #          |
+        #       .--|-.(x2,y2)
+        #       |  |/
+        # ---------+------------<-- output
         #       | /|
-        #       |/ |gpuTemp
-        #       .
+        #       |/ |
+        #       .  |<-- gpuTemp
+        #       ^    
         #      (x1,y1)
         #
         pts = self.getGraphItem(0).pos
