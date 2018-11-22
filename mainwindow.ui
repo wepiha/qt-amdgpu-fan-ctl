@@ -238,7 +238,7 @@
        </size>
       </property>
       <property name="plainText">
-       <string>WARNING: THIS SOFTWARE DOES NOT INCLUDE A WARRANTY OF ANY KIND. ENABLE MANUAL FAN CONTROL AT YOUR OWN RISK. YOU HAVE BEEN WARNED! Also note that many devices will limit the lowest possible fan speed and may not allow for control below that threshold.</string>
+       <string>WARNING: THIS SOFTWARE DOES NOT INCLUDE A WARRANTY OF ANY KIND. ENABLE MANUAL FAN CONTROL AT YOUR OWN RISK. YOU HAVE BEEN WARNED! Also note that many devices will limit the lowest possible fan speed and may not allow for control below that threshold. Manual fan speeds may be subject to hardware adjustments that appear to differ slightly from the graph above.</string>
       </property>
      </widget>
     </item>
