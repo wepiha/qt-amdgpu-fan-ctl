@@ -6,9 +6,9 @@ import json
 import numpy as np
 import math
 
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtGui, QtWidgets
 
+import pyqtgraph as pg
 import mainwindow
 
 CONFIG_FILE = "config.json"
