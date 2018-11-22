@@ -5,9 +5,9 @@ Python script which enables a GUI controllable fan-curve for the AMDGPU driver u
 GNU GPLv3
 
 ### Requirements
-> Python3
-> numpy
-> pyqtgraph
+- Python3
+- numpy
+- pyqtgraph
 
 You must have SUDO abilities, and NOPASSWD:ALL for sudoers
 > $USER ALL=(ALL) NOPASSWD:ALL
