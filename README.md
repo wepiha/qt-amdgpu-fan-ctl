@@ -8,6 +8,7 @@ GNU GPLv3
 - Python3
 - numpy
 - pyqtgraph
+- Qt5
 
 You must have SUDO abilities, and NOPASSWD:ALL for sudoers
 > $USER ALL=(ALL) NOPASSWD:ALL
