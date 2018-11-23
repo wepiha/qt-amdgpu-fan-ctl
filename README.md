@@ -31,7 +31,6 @@ Run the script as root
 ### TODO:
 - Handle multiple GPU fan profiles
 - System information panel / window
-- Better reflect SYSTEM / MANUAL status
 
 ## Known Issues:
 - Fan speed shown on graph differs from hardware (will not fix)

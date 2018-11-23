@@ -26,7 +26,7 @@ HWMON_PWM_MAX = "pwm1_max"
 HWMON_PWM_ENABLE = "pwm1_enable"
 
 HWMON_STATUS_MAN = "MANUAL"
-HWMON_STATUS_SYS = "SYSTEM"
+HWMON_STATUS_SYS = "AUTO"
 
 VIEW_LIMITER = 110
 VIEW_MIN = -1
@@ -326,7 +326,7 @@ class MainWindow(QtWidgets.QMainWindow):
             r = n
             g = 0
 
-        hexstr = "#%s00" % ('{:02x}{:02x}'.format(r,g))#, '{:02x}'.format(g))
+        hexstr = "#%s00" % ('{:02x}{:02x}'.format(r,g))
 
         self.ui.labelCurrentTemp.setText(str(gpuTemp))
         self.ui.labelCurrentTemp.setStyleSheet(styleSheet % hexstr)
