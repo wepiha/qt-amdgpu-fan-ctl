@@ -283,9 +283,11 @@ class MainWindow(QtWidgets.QMainWindow):
             color = "#ff5d00"
             self.getGraphItem('fTarget').setData([gpuTemp], [(targetSpeed / 255) * 100])
             self.getGraphItem('fTarget').setPen(color)
+            self.ui.pushButtonEnable.setText("Disable")
         else:
             self.getGraphItem('fTarget').setData([gpuTemp], [fanSpeed])
             self.getGraphItem('fTarget').setPen('#0000FF')
+            self.ui.pushButtonEnable.setText("Enable")
 
         self.ui.labelCurrentTemp.setText(str(gpuTemp))
         self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, b))
@@ -293,7 +295,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelCurrentFan.setText(str(fanSpeed))
         self.ui.labelFanProfileStatus.setText("  %s  " % status)
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
-        self.ui.pushButtonEnable.setText(status.value)
 
     def configSave(self):
         
