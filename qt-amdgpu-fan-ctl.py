@@ -47,6 +47,7 @@ hwmon = hw.HwMon()
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         self.myConfig = self.configLoad()
+        self.timer = QtCore.QTimer()
 
         super(MainWindow, self).__init__()
         self.ui = mainwindow.Ui_MainWindow()
@@ -56,17 +57,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonEnable.clicked.connect(self.buttonEnableClicked)
         self.ui.pushButtonSave.clicked.connect(self.buttonSaveClicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
+        self.timer.timeout.connect(self.timerTick)
+        self.timer.start()
+        self.spinBoxIntervalChanged(self.myConfig[CONFIG_INTERVAL_VAR])
 
-        self.initPlotWidget()
-        self.initTimer()
-    def initPlotWidget(self):
         pg.setConfigOptions(antialias=True)
         gv = self.ui.graphicsView
 
         gv.setLabels(left=('Fan Speed', '%'), bottom=("Temperature", '°C'))
         gv.setMenuEnabled(False)
         gv.setAspectLocked(True)
-        gv.showGrid(x=True, y=True, alpha=0.25)
+        gv.showGrid(x=True, y=True, alpha=0.1)
         gv.getAxis('bottom').setTickSpacing(10, 1)
         gv.getAxis('left').setTickSpacing(10, 5)
         gv.hideButtons()
@@ -80,22 +81,17 @@ class MainWindow(QtWidgets.QMainWindow):
             minYRange = VIEW_LIMITER,
             maxYRange = VIEW_LIMITER
         )
+
+        graph = Graph(gv, data=self.myConfig[CONFIG_POINT_VAR], name='graph')
         pen = pg.mkPen('w', width=0.2, style=QtCore.Qt.DashLine)
 
-        graph = Graph(gv )
-        graph.setData(pos=np.stack(self.myConfig[CONFIG_POINT_VAR]))
-        graph._name = 'graph'
-
         lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp", angle=270)
-        pg.InfLineLabel(lineCurrTemp, text="Temperature", position=0.7, rotateAxis=(2,0))
-        #lineLabelCurrTemp.setAngle(90)
-        
         lineCurrFan = pg.InfiniteLine(pos=0, pen=pen, name="currFan", angle=0)
+        
+        pg.InfLineLabel(lineCurrTemp, text="Temperature", position=0.7, rotateAxis=(2,0))
         pg.InfLineLabel(lineCurrFan, text="Fan Speed", position=0.15, rotateAxis=(0,0))
-        #lineLabelCurrFan.setAngle(0)
 
         textLabelXY = pg.TextItem()
-
 
         scatterItem = pg.ScatterPlotItem(pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
@@ -121,12 +117,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.pushButtonAdd.clicked.connect(graph.addPoint)
         self.ui.pushButtonRemove.clicked.connect(graph.removePoint)
-    def initTimer(self):
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.timerTick)
-        self.timer.start()
-        self.spinBoxIntervalChanged(self.myConfig[CONFIG_INTERVAL_VAR])
-
+  
     def closeEvent(self, *args, **kwargs):
         if (PwmState(hwmon.pwm1_enable) == PwmState.Manual):
             hwmon.pwm1_enable = PwmState.Auto
@@ -237,12 +228,15 @@ class MainWindow(QtWidgets.QMainWindow):
 class Graph(pg.GraphItem):
     MIN_POINT_DISTANCE = 16
 
-    def __init__(self, parent):
+    def __init__(self, parent, data, name):
         self.dragPoint = None
         self.dragOffset = None
         self.plotWidget = parent
-
+        self._name = name
+        
         pg.GraphItem.__init__(self)
+        self.setData(pos=np.stack(data))
+
     def setData(self, **kwds):
         self.data = kwds
         if 'pos' in self.data:
