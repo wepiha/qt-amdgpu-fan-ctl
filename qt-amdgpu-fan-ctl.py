@@ -31,6 +31,8 @@ HWMON_STATUS_SYS = "AUTO"
 VIEW_LIMITER = 110
 VIEW_MIN = -1
 
+QLABEL_STYLE_SHEET = "QLabel { color: white; background-color: %s; }"
+
 # requires tweaking to store fan profile based on card index
 DEFAULTCONFIG = {
     CONFIG_PATH_VAR : "/sys/class/drm/card" + CONFIG_INDEX_VAR + "/device/hwmon/hwmon0/",
@@ -104,13 +106,26 @@ class MainWindow(QtWidgets.QMainWindow):
         lineLabelCurrFan.setAngle(0)
 
         scatterItem = pg.ScatterPlotItem(name='tMax', pen=pg.mkPen('r'))
+        scatterItem._name = 'tMax'
         scatterItem.setData([self.getGPUTempCrit()], [100], symbol='t')
+
+        targetTemp = pg.ScatterPlotItem(name='fTarget', pen=pg.mkPen('#0000FF'))
+        targetTemp._name = 'fTarget'
+        targetTemp.setData([-10], [-10], symbol='t')
+
+        legendItem = pg.LegendItem()
+        legendItem.addItem(scatterItem, name='GPU tMax')
+        legendItem.addItem(targetTemp, name='Fan Target')
+        legendItem.setPos(85, 30)
 
         gv.addItem(graph)
         gv.addItem(lineCurrTemp)
         gv.addItem(lineCurrFan)
         gv.addItem(textLabelXY)
-        #gv.addItem(scatterItem)
+        gv.addItem(targetTemp)
+        gv.addItem(scatterItem)
+
+        gv.addItem(legendItem)
 
     def initTimer(self):
         self.timer = QtCore.QTimer()
@@ -303,20 +318,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
         gpuTemp = self.getGPUTemp()
-        #fanSpeed = (self.getFanSpeedFromPlot() / 255) * 100 
-        fanSpeed = self.getGPUFanPercent() # TODO: plot this on graph as data point, replacing this line with commented code above
+        targetSpeed = (self.getFanSpeedFromPlot() / 255) * 100
+        fanSpeed = self.getGPUFanPercent()
         ctlStatus = self.getHwmonStatus()
         critTemp = self.getGPUTempCrit()
 
         color = "green"
-        styleSheet = "QLabel { color: white; background-color: %s; }"
         
-        if (ctlStatus == HWMON_STATUS_MAN):
-            self.setFanSpeedAdjustments()
-            color = "#ff5d00"
-
         r = 255
         g = 255
+        b = 0
         n = int((gpuTemp / critTemp) * 255)
 
         if (gpuTemp <= ( critTemp / 2 )):
@@ -326,19 +337,26 @@ class MainWindow(QtWidgets.QMainWindow):
             r = n
             g = 0
 
-        hexstr = "#%s00" % ('{:02x}{:02x}'.format(r,g))
-
-        self.ui.labelCurrentTemp.setText(str(gpuTemp))
-        self.ui.labelCurrentTemp.setStyleSheet(styleSheet % hexstr)
-
-        self.ui.labelCurrentFan.setText(str(fanSpeed))
-        self.ui.labelFanProfileStatus.setText("  %s  " % ctlStatus)
-        self.ui.labelFanProfileStatus.setStyleSheet("QLabel { color: white; background-color: %s; }" % color)
-
         # move InfiniteLines
         self.getGraphItem('currTemp').setValue(gpuTemp)
         self.getGraphItem('currFan').setValue(fanSpeed)
         
+        if (ctlStatus == HWMON_STATUS_MAN):
+            self.setFanSpeedAdjustments()
+            color = "#ff5d00"
+            self.getGraphItem('fTarget').setData([gpuTemp], [targetSpeed])
+            self.getGraphItem('fTarget').setPen(color)
+        else:
+            self.getGraphItem('fTarget').setData([gpuTemp], [fanSpeed])
+            self.getGraphItem('fTarget').setPen('#0000FF')
+
+        self.ui.labelCurrentTemp.setText(str(gpuTemp))
+        self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, b))
+
+        self.ui.labelCurrentFan.setText(str(fanSpeed))
+        self.ui.labelFanProfileStatus.setText("  %s  " % ctlStatus)
+        self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
+
     def configSave(self):
         
         try:
