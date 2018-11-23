@@ -30,7 +30,7 @@ Allow SUDO with NOPASSWD:ALL for sudoers
 - [ ] Configuration (log settings, SI units, enable/disable features like colorization, graph options)
 
 ### Screenshot:
-![Image showing GUI with gpu fan curve plot and various controls](media/qt-amdgpu-fan-ctl.gif "Main GUI")
+![Image showing GUI with gpu fan curve plot and various controls](media/screenshot.png "Main GUI")
 
 Screencap is from and older build, and will change rapidly now the kernel interface can be added to easily
 
