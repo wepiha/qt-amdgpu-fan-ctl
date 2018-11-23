@@ -28,4 +28,5 @@ Allow SUDO with NOPASSWD:ALL for sudoers
 
 ### Screenshot:
 ![Image showing GUI with gpu fan curve plot and various controls](media/screenshot.png "Main GUI")
+
 ######Screencap may differ from current build
