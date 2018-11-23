@@ -295,6 +295,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
 
         self.ui.pushButtonEnable.setText(button)
+        self.ui.pushButtonEnable.setChecked(PwmState(state) == PwmState.Manual)
 
     def configSave(self):
         
