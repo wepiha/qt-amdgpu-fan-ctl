@@ -23,7 +23,7 @@ CONFIG_INTERVAL_VAR = "interval"
 CONFIG_LOGGING_VAR = "logging"
 
 VIEW_LIMITER = 110
-VIEW_MIN = -1
+VIEW_MIN = -3
 
 QLABEL_STYLE_SHEET = "QLabel { color: white; background-color: %s; }"
 
@@ -52,16 +52,13 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui = mainwindow.Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self.ui.spinBoxInterval.valueChanged.connect(self.setInterval)
-        self.ui.pushButtonEnable.clicked.connect(self.setEnabled)
-        self.ui.pushButtonAdd.clicked.connect(self.addPoint)
-        self.ui.pushButtonRemove.clicked.connect(self.removePoint)
-        self.ui.pushButtonSave.clicked.connect(self.configSave)
+        self.ui.spinBoxInterval.valueChanged.connect(self.spinBoxIntervalChanged)
+        self.ui.pushButtonEnable.clicked.connect(self.buttonEnableClicked)
+        self.ui.pushButtonSave.clicked.connect(self.buttonSaveClicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
 
         self.initPlotWidget()
         self.initTimer()
-        
     def initPlotWidget(self):
         pg.setConfigOptions(antialias=True)
         gv = self.ui.graphicsView
@@ -85,20 +82,20 @@ class MainWindow(QtWidgets.QMainWindow):
         )
         pen = pg.mkPen('w', width=0.2, style=QtCore.Qt.DashLine)
 
-        graph = Graph(gv)
+        graph = Graph(gv )
         graph.setData(pos=np.stack(self.myConfig[CONFIG_POINT_VAR]))
         graph._name = 'graph'
 
-        lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp")
-        lineLabelCurrTemp = pg.InfLineLabel(lineCurrTemp, text="Temp\n", position=0.8)
+        lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp", angle=270)
+        pg.InfLineLabel(lineCurrTemp, text="Temperature", position=0.7, rotateAxis=(2,0))
+        #lineLabelCurrTemp.setAngle(90)
         
         lineCurrFan = pg.InfiniteLine(pos=0, pen=pen, name="currFan", angle=0)
-        lineLabelCurrFan = pg.InfLineLabel(lineCurrFan, text="Fan Speed", position=0.1)
+        pg.InfLineLabel(lineCurrFan, text="Fan Speed", position=0.15, rotateAxis=(0,0))
+        #lineLabelCurrFan.setAngle(0)
 
         textLabelXY = pg.TextItem()
 
-        lineLabelCurrTemp.setAngle(90)
-        lineLabelCurrFan.setAngle(0)
 
         scatterItem = pg.ScatterPlotItem(pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
@@ -122,140 +119,44 @@ class MainWindow(QtWidgets.QMainWindow):
 
         gv.addItem(legendItem)
 
+        self.ui.pushButtonAdd.clicked.connect(graph.addPoint)
+        self.ui.pushButtonRemove.clicked.connect(graph.removePoint)
     def initTimer(self):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timerTick)
         self.timer.start()
-        self.setInterval(self.myConfig[CONFIG_INTERVAL_VAR])
+        self.spinBoxIntervalChanged(self.myConfig[CONFIG_INTERVAL_VAR])
 
     def closeEvent(self, *args, **kwargs):
         if (PwmState(hwmon.pwm1_enable) == PwmState.Manual):
             hwmon.pwm1_enable = PwmState.Auto
 
-    def setEnabled(self, value):
+    def buttonEnableClicked(self, value):
         hwmon.pwm1_enable = PwmState.Manual if value else PwmState.Auto
 
-    def setInterval(self, value):
+    def spinBoxIntervalChanged(self, value):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
         self.timer.setInterval(int(value))
 
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
     
-    def getFanSpeedFromPlot(self, temp = hwmon.temp1_input):
-
-        # given gpuTemp we use some trig to 
-        # calculate output fan speed as a 
-        # percentage of the maximum 255
-        #          |
-        #       .--|-.(x2,y2)
-        #       |  |/
-        # ---------+------------<-- output
-        #       | /|
-        #       |/ |
-        #       .  |<-- gpuTemp
-        #       ^    
-        #      (x1,y1)
-        #
-        pts = self.getGraphItem('graph').pos
-
-        for i in range(0, len(pts) - 1):
-            x1 = pts[i][0]
-            x2 = pts[i+1][0]
-            y1 = pts[i][1]
-            y2 = pts[i+1][1]
-
-            if (( temp >= x1 ) and ( temp < x2)):
-                output = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1
-                break
-
-        return output
-
-    def getLineLength(self, p1, p2):
-        #FIXME: needs bounds checks
-        pts = self.getGraphItem('graph').pos
-        
-        x1 = pts[p1][0]
-        x2 = pts[p2][0]
-        y1 = pts[p1][1]
-        y2 = pts[p2][1]
-
-        return math.sqrt( #pythagoras
-            math.pow( x2 - x1, 2 ) + 
-            math.pow( y2 - y1, 2 )
-        )
-
-    def addPoint(self):
-        # work out where the largest gap occurs and insert the new point in the middle
-        pts = self.getGraphItem('graph').pos
-        
-        inspos = -1
-        length = 0
-        output = [0, 0]
-
-        for i in range(0, len(pts) - 1):
-            h = self.getLineLength(i, i + 1)
-
-            if (h > length):
-                inspos = i
-                length = h
-                output = [ 
-                    int(pts[i][0] + ( ( pts[i+1][0] - pts[i][0] ) / 2 )), 
-                    int(pts[i][1] + ( ( pts[i+1][1] - pts[i][1] ) / 2 )) 
-                ]
-        
-        if (length < 20):
-            return
-
-        flat = pts.tolist()
-        flat.insert(inspos + 1, output)
-
-        self.setGraphData(flat)
-    def removePoint(self):
-        pts = self.getGraphItem('graph').pos
-        
-        if (len(pts) == 2):
-            return
-
-        delpos = 1
-        length = 1000
-
-        for i in range(1, len(pts) - 1):
-            h = self.getLineLength(i, i + 1)
-            #print("%d is %d " % (i, h))
-            if (h < length):
-                delpos = i
-                length = h
-        
-        flat = pts.tolist()
-        #print("Removing %d (%d)" % (delpos, length))
-
-        del flat[delpos]
-        self.setGraphData(flat)
-
-    def setGraphData(self, data):
-        self.myConfig[CONFIG_POINT_VAR] = data
-        self.getGraphItem('graph').setData(pos=np.stack(data))
-    def getGraphItem(self, name):
+    def getSceneItem(self, name):
         for item in self.ui.graphicsView.plotItem.items:
             if (hasattr(item, '_name')) and (item._name == name):
                 return item
         
         raise LookupError("The item '%s' was not found" % name)
-        
-    def getGraphFlatList(self):
-        shape = self.getGraphItem('graph').pos.shape
-        return self.getGraphItem('graph').pos.reshape(shape).tolist()
-        
+    
     def timerTick(self):
-        self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
+        self.myConfig[CONFIG_POINT_VAR] = self.getSceneItem('graph').pos.tolist()
 
         pwm1_max = hwmon.pwm1_max
         temp1_input = hwmon.temp1_input
         temp1_crit = hwmon.temp1_crit
         pwm1_enable = hwmon.pwm1_enable
 
-        targetSpeed = int((self.getFanSpeedFromPlot(temp1_input) / 100) * pwm1_max)
+        targetSpeed = int((self.getSceneItem('graph').getIntersection(x=temp1_input) / 100) * pwm1_max)
         fanSpeed = int((hwmon.pwm1 / pwm1_max) * 100)
         
         r = int((temp1_input / temp1_crit) * 255)
@@ -271,11 +172,11 @@ class MainWindow(QtWidgets.QMainWindow):
             button = "Enable"
             y = [fanSpeed]
         
-        self.getGraphItem('fTarget').setPen(color)
-        self.getGraphItem('fTarget').setData(temp1_input, y)
+        self.getSceneItem('fTarget').setPen(color)
+        self.getSceneItem('fTarget').setData(temp1_input, y)
 
-        self.getGraphItem('currTemp').setValue(temp1_input)
-        self.getGraphItem('currFan').setValue(fanSpeed)
+        self.getSceneItem('currTemp').setValue(temp1_input)
+        self.getSceneItem('currFan').setValue(fanSpeed)
 
         self.ui.labelTemperature.setText("%s °C" % temp1_input)
         self.ui.labelTemperature.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, 0))
@@ -294,7 +195,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelMemClock.setText("%s MHz" % hwmon.pp_dpm_mclk_value)
         self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_value)
 
-    def configSave(self):
+    def buttonSaveClicked(self):
         
         try:
             with open(CONFIG_FILE, "w") as write_file:
@@ -334,6 +235,8 @@ class MainWindow(QtWidgets.QMainWindow):
         return conf
  
 class Graph(pg.GraphItem):
+    MIN_POINT_DISTANCE = 16
+
     def __init__(self, parent):
         self.dragPoint = None
         self.dragOffset = None
@@ -350,6 +253,77 @@ class Graph(pg.GraphItem):
         self.updateGraph()
     def updateGraph(self):
         pg.GraphItem.setData(self, **self.data)
+
+    def addPoint(self):
+        # work out where the largest gap occurs and insert the new point in the middle
+        inspos = -1
+        length = 0
+        output = [0, 0]
+
+        for i in range(0, len(self.data['pos']) - 1):
+            h = self.getPointDistance(i, i + 1)
+
+            if (h > length):
+                inspos = i
+                length = h
+                output = [ 
+                    int(self.data['pos'][i][0] + ( ( self.data['pos'][i+1][0] - self.data['pos'][i][0] ) / 2 )), 
+                    int(self.data['pos'][i][1] + ( ( self.data['pos'][i+1][1] - self.data['pos'][i][1] ) / 2 )) 
+                ]
+        
+        if (length < self.MIN_POINT_DISTANCE):
+            return
+
+        flat = self.data['pos'].tolist()
+        flat.insert(inspos + 1, output)
+
+        self.setData(pos=np.stack(flat))
+    def removePoint(self):
+        if (len(self.data['pos']) == 2):
+            # don't remove the last 2 points
+            return
+
+        delpos = 1
+        length = 1000
+
+        for i in range(1, len(self.data['pos']) - 1):
+            h = self.getPointDistance(i, i + 1)
+            #print("%d is %d " % (i, h))
+            if (h < length):
+                delpos = i
+                length = h
+        
+        flat = self.data['pos'].tolist()
+        #print("Removing %d (%d)" % (delpos, length))
+
+        del flat[delpos]
+        self.setData(pos=np.stack(flat))
+    def getIntersection(self, x = None, y = None):
+        if (x == None) and (y == None):
+            raise SyntaxError("Must specify either x or y intersection value")
+        
+        pts = self.data['pos']
+
+        for i in range(0, len(pts) - 1):
+            x1 = pts[i][0]
+            x2 = pts[i+1][0]
+            y1 = pts[i][1]
+            y2 = pts[i+1][1]
+
+            if ((x != None) and ( x >= x1 ) and ( x < x2)):
+                return (((x - x1) / (x2 - x1)) * (y2 - y1)) + y1
+                    
+            if ((y != None) and ( y >= y1 ) and ( y < y2)):
+                return (((y - y1) / (y2 - y1)) * (x2 - x1)) + x1
+
+        return 0
+
+    def getPointDistance(self, p1, p2):
+        return math.sqrt(
+            math.pow( self.data['pos'][p2][0] - self.data['pos'][p1][0], 2 ) + 
+            math.pow( self.data['pos'][p2][1] - self.data['pos'][p1][1], 2 )
+        )
+
     def mouseDragEvent(self, event):
         textWidget = self.plotWidget.plotItem.items[3] #FIXME: If possible, refer without using fixed-value indicies
         textWidget.setText("")
