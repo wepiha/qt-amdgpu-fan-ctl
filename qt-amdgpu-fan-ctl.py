@@ -173,7 +173,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def getLineLength(self, p1, p2):
         #FIXME: needs bounds checks
-        pts = self.getGraphItem(0).pos
+        pts = self.getGraphItem('graph').pos
         
         x1 = pts[p1][0]
         x2 = pts[p2][0]
@@ -187,7 +187,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def addPoint(self):
         # work out where the largest gap occurs and insert the new point in the middle
-        pts = self.getGraphItem(0).pos
+        pts = self.getGraphItem('graph').pos
         
         inspos = -1
         length = 0
@@ -212,7 +212,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setGraphData(flat)
     def removePoint(self):
-        pts = self.getGraphItem(0).pos
+        pts = self.getGraphItem('graph').pos
         
         if (len(pts) == 2):
             return
@@ -235,7 +235,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setGraphData(self, data):
         self.myConfig[CONFIG_POINT_VAR] = data
-        self.getGraphItem(0).setData(pos=np.stack(data))
+        self.getGraphItem('graph').setData(pos=np.stack(data))
     def getGraphItem(self, name):
         for item in self.ui.graphicsView.plotItem.items:
             if (hasattr(item, '_name')) and (item._name == name):
@@ -291,8 +291,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelPower.setText("%.1f W" % hwmon.power1_average)
         self.ui.labelVoltage.setText("%d mV" % hwmon.in0_input)
 
-        print(hwmon.pp_dpm_mclk_value)
-        print(hwmon.pp_dpm_sclk_value)
+        self.ui.labelMemClock.setText("%s MHz" % hwmon.pp_dpm_mclk_value)
+        self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_value)
 
     def configSave(self):
         
