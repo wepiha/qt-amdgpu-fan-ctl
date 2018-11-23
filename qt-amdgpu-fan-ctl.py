@@ -8,7 +8,7 @@ import math
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from common import hwmonInterface as hw
-from common.hwmonInterface import Interface, Status
+from common.hwmonInterface import Interface, PwmState
 
 import pyqtgraph as pg
 import mainwindow
@@ -42,6 +42,7 @@ DEFAULTCONFIG = {
 
 lastCardIndex = 0
 lastCtlValue = -1
+hwmon = hw.HwMon()
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -57,8 +58,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonRemove.clicked.connect(self.removePoint)
         self.ui.pushButtonSave.clicked.connect(self.configSave)
         self.ui.pushButtonClose.clicked.connect(self.close)
-
-        self.hwmon = hw.HwMon()
 
         self.initPlotWidget()
         self.initTimer()
@@ -102,7 +101,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         scatterItem = pg.ScatterPlotItem(name='tMax', pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
-        scatterItem.setData([self.hwmon.getGPUTempCrit()], [100], symbol='t')
+        scatterItem.setData([hwmon.temp1_crit], [100], symbol='t')
 
         targetTemp = pg.ScatterPlotItem(name='fTarget', pen=pg.mkPen('#0000FF'))
         targetTemp._name = 'fTarget'
@@ -122,8 +121,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         gv.addItem(legendItem)
 
-        self.hwmon.getHwmonPowerCap()
-
     def initTimer(self):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timerTick)
@@ -131,11 +128,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setInterval(self.myConfig[CONFIG_INTERVAL_VAR])
 
     def closeEvent(self, *args, **kwargs):
-        if (self.hwmon.getStatus() == Status.Manual):
-            self.hwmon.setpwm1_enable(True)
+        if (hwmon.status() == PwmState.Manual):
+            hwmon.pwm1_enable = True
 
     def setEnabled(self, value):
-        self.hwmon.setpwm1_enable(not value)
+        hwmon.pwm1_enable = not value
 
     def setInterval(self, value):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
@@ -146,7 +143,7 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def getFanSpeedFromPlot(self):
         
-        temp = self.hwmon.getGPUTemp()
+        temp = hwmon.temp1_input
         # given gpuTemp we use some trig to 
         # calculate output fan speed as a 
         # percentage of the maximum 255
@@ -170,7 +167,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if (( temp >= x1 ) and ( temp < x2)):
                 sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 
-                output = int((sFan / 100) * self.hwmon.getGPUPWMMax())
+                output = int((sFan / 100) * hwmon.pwm1_max)
                 break
 
         return output
@@ -254,11 +251,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def timerTick(self):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
-        gpuTemp = self.hwmon.getGPUTemp()
         targetSpeed = self.getFanSpeedFromPlot()
-        fanSpeed = self.hwmon.getGPUFanPercent()
-        critTemp = self.hwmon.getGPUTempCrit()
-        status = self.hwmon.getStatus()
+        gpuTemp = hwmon.temp1_input
+        fanSpeed = hwmon.pwm1
+        critTemp = hwmon.temp1_crit
+        status = hwmon.pwm1_enable
         
         r = 255
         g = 255
@@ -272,8 +269,8 @@ class MainWindow(QtWidgets.QMainWindow):
             r = n
             g = 0
         
-        if (status == Status.Manual):
-            self.hwmon.setvalue(Interface.pwm1, targetSpeed)
+        if (PwmState(status) == PwmState.Manual):
+            hwmon.pwm1 = targetSpeed
             color = "#ff5d00"
             button = "Disable"
             y = [(targetSpeed / 255) * 100]
@@ -293,9 +290,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.labelCurrentFan.setText(str(fanSpeed))
 
-        self.ui.labelFanProfileStatus.setText("  %s  " % status)
+        self.ui.labelFanProfileStatus.setText("  %s  " % PwmState(status))
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
-        
+
         self.ui.pushButtonEnable.setText(button)
 
     def configSave(self):

@@ -1,12 +1,12 @@
 import os
 from enum import Enum
 
-class Status(Enum):
+class PwmState(Enum):
     def __str__(self):
-        return str(self.value)
-    Disabled = "DISABLED"
-    Manual = "MANUAL"
-    Auto = "AUTO"
+        return str(self.name)
+    Disabled = 0
+    Manual = 1
+    Auto = 2
 
 class Interface(Enum):
     def __str__(self):
@@ -46,7 +46,7 @@ class HwMon:
         path = HWMON_KERNEL_PATH % (self._card, interface)
         os.system('python3 %s/common/setperms.py %s' % (os.getcwd(), path) )
 
-    def setvalue(self, interface, value):
+    def __setvalue(self, interface, value):
         if not isinstance(interface, Interface):
             raise TypeError("interface must be an instance of Interface Enum")
 
@@ -60,38 +60,45 @@ class HwMon:
             print("__setvalue(%s, %s) failed: %s" % (interface.name, value, e))
         finally:
             print("__setvalue(%s, %s) success" % (interface.name, value) )
-        
     
-    def setpwm1_enable(self, automatic = True):
-        self.setvalue(Interface.pwm1_enable, "2" if automatic else "1")
+    @property
+    def pwm1_enable(self):
+        return self.__getvalue(Interface.pwm1_enable)
 
-    def getHwmonPowerCap(self):
-        pass
+    @pwm1_enable.setter
+    def pwm1_enable(self, automatic = True):
+        self.__setvalue(Interface.pwm1_enable, "2" if automatic else "1")
     
-    def getGPUTemp(self):
-        tIn = self.__getvalue(Interface.temp1_input)
-        return int(tIn / 1000)
+    @property
+    def temp1_input(self):
+        return self.__getvalue(Interface.temp1_input) / 1000
 
-    def getGPUTempCrit(self):
+    @property
+    def temp1_crit(self):
         tCrit = self.__getvalue(Interface.temp1_crit)
         return int(tCrit / 1000)
 
-    def getGPUPWMMax(self):
+    @property
+    def pwm1_max(self):
         return self.__getvalue(Interface.pwm1_max)
 
-    def getGPUFanPercent(self):
+    @property
+    def pwm1(self):
         fIn = self.__getvalue(Interface.pwm1)
-        fMax = self.getGPUPWMMax()
+        fMax = self.pwm1_max
         fRet = int((fIn / fMax) * 100)
         
         return fRet
-
-    def getStatus(self):
+    @pwm1.setter
+    def pwm1(self, value):
+        self.__setvalue(Interface.pwm1, value)
+        
+    def status(self):
         val = self.__getvalue(Interface.pwm1_enable)
 
         if (val == 0):
-            return Status.Disabled
+            return PwmState.Disabled
         elif (val == 1):
-            return Status.Manual
+            return PwmState.Manual
         else:
-            return Status.Auto
+            return PwmState.Auto
