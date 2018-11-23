@@ -7,6 +7,9 @@ import math
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from common import hwmonInterface as hw
+from common.hwmonInterface import Interface, Status
+
 import pyqtgraph as pg
 import mainwindow
 
@@ -19,15 +22,6 @@ CONFIG_INDEX_VAR = "${index}"
 CONFIG_INTERVAL_VAR = "interval"
 CONFIG_LOGGING_VAR = "logging"
 
-HWMON_TEMP1_INPUT = "temp1_input"
-HWMON_TEMP1_CRIT = "temp1_crit"
-HWMON_PWM_INPUT = "pwm1"
-HWMON_PWM_MAX = "pwm1_max"
-HWMON_PWM_ENABLE = "pwm1_enable"
-
-HWMON_STATUS_MAN = "MANUAL"
-HWMON_STATUS_SYS = "AUTO"
-
 VIEW_LIMITER = 110
 VIEW_MIN = -1
 
@@ -35,7 +29,6 @@ QLABEL_STYLE_SHEET = "QLabel { color: white; background-color: %s; }"
 
 # requires tweaking to store fan profile based on card index
 DEFAULTCONFIG = {
-    CONFIG_PATH_VAR : "/sys/class/drm/card" + CONFIG_INDEX_VAR + "/device/hwmon/hwmon0/",
     CONFIG_CARD_VAR : "0",
     CONFIG_POINT_VAR : (
         (0, 0),
@@ -59,15 +52,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.setupUi(self)
 
         self.ui.spinBoxInterval.valueChanged.connect(self.setInterval)
+        self.ui.pushButtonEnable.clicked.connect(self.setEnabled)
         self.ui.pushButtonAdd.clicked.connect(self.addPoint)
         self.ui.pushButtonRemove.clicked.connect(self.removePoint)
-        self.ui.pushButtonEnable.clicked.connect(self.setCtlOwner)
         self.ui.pushButtonSave.clicked.connect(self.configSave)
         self.ui.pushButtonClose.clicked.connect(self.close)
 
+        self.hwmon = hw.HwMon()
+
         self.initPlotWidget()
         self.initTimer()
-
+        
     def initPlotWidget(self):
         pg.setConfigOptions(antialias=True)
         gv = self.ui.graphicsView
@@ -107,7 +102,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         scatterItem = pg.ScatterPlotItem(name='tMax', pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
-        scatterItem.setData([self.getGPUTempCrit()], [100], symbol='t')
+        scatterItem.setData([self.hwmon.getGPUTempCrit()], [100], symbol='t')
 
         targetTemp = pg.ScatterPlotItem(name='fTarget', pen=pg.mkPen('#0000FF'))
         targetTemp._name = 'fTarget'
@@ -127,48 +122,20 @@ class MainWindow(QtWidgets.QMainWindow):
 
         gv.addItem(legendItem)
 
+        self.hwmon.getHwmonPowerCap()
+
     def initTimer(self):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.timerTick)
         self.timer.start()
         self.setInterval(self.myConfig[CONFIG_INTERVAL_VAR])
 
-    def setPerms(self, path):
-        os.system('python3 ' + os.getcwd() + '/common/setperms.py ' + path)
-
     def closeEvent(self, *args, **kwargs):
-        if (self.getHwmonStatus() == HWMON_STATUS_MAN):
-            self.setCtlOwner(False)
+        if (self.hwmon.getStatus() == Status.Manual):
+            self.hwmon.setpwm1_enable(True)
 
-    def setCtlOwner(self, value):
-        path = self.myConfig[CONFIG_PATH_VAR] + HWMON_PWM_ENABLE
-        
-        self.setPerms(path)
-        try:
-            with open(path, "w") as file:
-                file.write("1" if (value) else "2")
-        except:
-            print("Failed to setCtlOwner!")
-        finally:
-            print("setCtlOwner: " + self.getHwmonStatus() )
-    def setCtlValue(self, value):
-        path = self.myConfig[CONFIG_PATH_VAR] + HWMON_PWM_INPUT
-
-        global lastCtlValue
-        
-        if (self.ui.pushButtonEnable.isChecked() != True) or (lastCtlValue == value):
-            return
-        
-        lastCtlValue = value
-
-        try:
-            self.setPerms(path)
-            with open(path, "w") as file:
-                file.write(str(value))
-        except:
-            print("Failed to setCtlValue!")
-        finally:
-            print("setCtlValue: " + str(value) )
+    def setEnabled(self, value):
+        self.hwmon.setpwm1_enable(not value)
 
     def setInterval(self, value):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
@@ -176,36 +143,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
-
-    def getHwmonInt(self, path):
-        try:
-            file = open(self.myConfig[CONFIG_PATH_VAR] + path, "r")
-            value = int(file.read())
-        except:
-            value = 0
-        #print("getHwmonInt: %s%s (%d)" % (self.myConfig[CONFIG_PATH_VAR], path, value))
-        return value
-    def getHwmonStatus(self):
-        fanStatus = self.getHwmonInt(HWMON_PWM_ENABLE)
-        return HWMON_STATUS_MAN if fanStatus != 2 else HWMON_STATUS_SYS
-    def getGPUTemp(self):
-        tIn = self.getHwmonInt(HWMON_TEMP1_INPUT)
-        return int(tIn / 1000)
-    def getGPUTempCrit(self):
-        tCrit = self.getHwmonInt(HWMON_TEMP1_CRIT)
-        return int(tCrit / 1000)
-    def getGPUPWMMax(self):
-        return self.getHwmonInt(HWMON_PWM_MAX)
-    def getGPUFanPercent(self):
-        fIn = self.getHwmonInt(HWMON_PWM_INPUT)
-        fMax = self.getGPUPWMMax()
-        fRet = int((fIn / fMax) * 100)
-        #print( "Get fan speed: %d%% (%d)" % (fRet, fIn))
-        return fRet
-
+    
     def getFanSpeedFromPlot(self):
         
-        temp = self.getGPUTemp()
+        temp = self.hwmon.getGPUTemp()
         # given gpuTemp we use some trig to 
         # calculate output fan speed as a 
         # percentage of the maximum 255
@@ -229,15 +170,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
             if (( temp >= x1 ) and ( temp < x2)):
                 sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 
-                output = int((sFan / 100) * self.getGPUPWMMax())
+                output = int((sFan / 100) * self.hwmon.getGPUPWMMax())
                 break
 
         return output
 
-    def setFanSpeedAdjustments(self):
-        output = self.getFanSpeedFromPlot()
-        self.setCtlValue(str(output))
-        
     def getLineLength(self, p1, p2):
         #FIXME: needs bounds checks
         pts = self.getGraphItem(0).pos
@@ -317,11 +254,11 @@ class MainWindow(QtWidgets.QMainWindow):
     def timerTick(self):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
-        gpuTemp = self.getGPUTemp()
-        targetSpeed = (self.getFanSpeedFromPlot() / 255) * 100
-        fanSpeed = self.getGPUFanPercent()
-        ctlStatus = self.getHwmonStatus()
-        critTemp = self.getGPUTempCrit()
+        gpuTemp = self.hwmon.getGPUTemp()
+        targetSpeed = self.getFanSpeedFromPlot()
+        fanSpeed = self.hwmon.getGPUFanPercent()
+        critTemp = self.hwmon.getGPUTempCrit()
+        status = self.hwmon.getStatus()
 
         color = "green"
         
@@ -341,10 +278,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.getGraphItem('currTemp').setValue(gpuTemp)
         self.getGraphItem('currFan').setValue(fanSpeed)
         
-        if (ctlStatus == HWMON_STATUS_MAN):
-            self.setFanSpeedAdjustments()
+        if (status == Status.Manual):
+            self.hwmon.setvalue(Interface.pwm1, targetSpeed)
             color = "#ff5d00"
-            self.getGraphItem('fTarget').setData([gpuTemp], [targetSpeed])
+            self.getGraphItem('fTarget').setData([gpuTemp], [(targetSpeed / 255) * 100])
             self.getGraphItem('fTarget').setPen(color)
         else:
             self.getGraphItem('fTarget').setData([gpuTemp], [fanSpeed])
@@ -354,8 +291,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, b))
 
         self.ui.labelCurrentFan.setText(str(fanSpeed))
-        self.ui.labelFanProfileStatus.setText("  %s  " % ctlStatus)
+        self.ui.labelFanProfileStatus.setText("  %s  " % status)
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
+        self.ui.pushButtonEnable.setText(status.value)
 
     def configSave(self):
         
