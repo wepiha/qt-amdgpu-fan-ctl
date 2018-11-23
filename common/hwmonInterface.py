@@ -89,31 +89,27 @@ class device(Enum):
     pp_dpm_sclk =  "pp_dpm_sclk"
 
 
-HWMON_KERNEL_PATH = "/sys/class/drm/card%s/%s"
+HWMON_SYSFS_PATH = "/sys/class/drm/card%s/%s"
 SETPERMS_PATH = 'python3 %s/common/setperms.py %s'
 
 class HwMon:
-
-    _card = 0
-
     def __init__(self, card = 0):
         self._card = card
-        self.__setperms(HWMON_KERNEL_PATH % (self._card, hwmon_hwmon0.pwm1))
     
+    def __setperms(self, path):
+        os.system('python3 %s/common/setperms.py %s' % (os.getcwd(), path) )
+
     def __getvalue(self, path):
         try:
-            file = open(HWMON_KERNEL_PATH % (self._card, path), "r")
+            file = open(HWMON_SYSFS_PATH % (self._card, path), "r")
             value = file.read()
         except Exception as e:
             raise e
             
         return value
-
-    def __setperms(self, path):
-        os.system('python3 %s/common/setperms.py %s' % (os.getcwd(), path) )
-
+    
     def __setvalue(self, interface, value):
-        path = HWMON_KERNEL_PATH % (self._card, interface)
+        path = HWMON_SYSFS_PATH % (self._card, interface)
         try:
             self.__setperms(path)
 
@@ -124,9 +120,11 @@ class HwMon:
         finally:
             print("__setvalue(%s, %s) success" % (interface.name, value) )
     
-
     @property
     def pwm1(self):
+        """
+        pulse width modulation fan level (0-255)
+        """
         return int(self.__getvalue(hwmon_hwmon0.pwm1))
     @pwm1.setter
     def pwm1(self, value):
@@ -139,6 +137,9 @@ class HwMon:
 
     @property
     def pwm1_enable(self):
+        """
+        pulse width modulation fan control method (0: no fan speed control, 1: manual fan speed control using pwm interface, 2: automatic fan speed control)
+        """
         return int(self.__getvalue(hwmon_hwmon0.pwm1_enable))
 
     @pwm1_enable.setter
@@ -149,51 +150,86 @@ class HwMon:
         self.__setvalue(hwmon_hwmon0.pwm1_enable, pwmstate.value)
     
     @property
+    def pwm1_min(self):
+        """
+        pulse width modulation fan control minimum level (0)
+        """
+        return 0
+        #return self.__getvalue(Interface.pwm1_min)
+
+    @property
     def pwm1_max(self):
+        """
+        pulse width modulation fan control maximum level (255)
+        """
         return 255
         #return self.__getvalue(Interface.pwm1_max)
 
-
-
     @property
     def temp1_input(self):
-        return int(self.__getvalue(hwmon_hwmon0.temp1_input)) / 1000
+        """
+        the on die GPU temperature in millidegrees Celsius
+        """
+        return int(self.__getvalue(hwmon_hwmon0.temp1_input))
 
     @property
     def temp1_crit(self):
-        tCrit = int(self.__getvalue(hwmon_hwmon0.temp1_crit))
-        return int(tCrit / 1000)
+        """
+        temperature critical max value in millidegrees Celsius
+        """
+        return int(int(self.__getvalue(hwmon_hwmon0.temp1_crit)))
 
     @property
     def fan1_input(self):
+        """
+        fan speed in RPM
+        """
         return int(self.__getvalue(hwmon_hwmon0.fan1_input))
 
     @property
     def power1_average(self):
-        return int(self.__getvalue(hwmon_hwmon0.power1_average)) / 1000000
+        """
+        average power used by the GPU in microWatts
+        """
+        return int(self.__getvalue(hwmon_hwmon0.power1_average))
 
     @property
     def in0_input(self):
+        """
+        the voltage on the GPU in millivolts
+        """
         return int(self.__getvalue(hwmon_hwmon0.in0_input))
 
     @property
-    def pp_dpm_mclk(self):
-        return self.__getvalue(device.pp_dpm_mclk)
-    @property
-    def pp_dpm_mclk_value(self):
-        for line in str(self.pp_dpm_mclk).splitlines():
-            if "*" in line:
-                return line[3:-5]
-        
+    def pp_dpm_mclk(self, strip = True):
+        """
+        When requesting pp_dpm_mclk you may optionally choose to keep 
+        all available clock setting data instead of returning only the 
+        current setting
+        """
+        value = self.__getvalue(device.pp_dpm_mclk)
+        if (not strip):
+            return value
+        else:
+            for line in str(value).splitlines():
+                if "*" in line:
+                    return line[3:-5]
+            
         return 0
     
     @property
-    def pp_dpm_sclk(self):
-        return self.__getvalue(device.pp_dpm_sclk)
-    @property
-    def pp_dpm_sclk_value(self):
-        for line in str(self.pp_dpm_sclk).splitlines():
-            if "*" in line:
-                return line[3:-5]
-        
+    def pp_dpm_sclk(self, strip = True):
+        """
+        When requesting pp_dpm_sclk you may optionally choose to keep 
+        all available clock setting data instead of returning only the 
+        current setting
+        """
+        value = self.__getvalue(device.pp_dpm_sclk)
+        if (not strip):
+            return value
+        else:
+            for line in str(value).splitlines():
+                if "*" in line:
+                    return line[3:-5]
+            
         return 0
