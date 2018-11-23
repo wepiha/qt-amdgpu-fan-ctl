@@ -74,6 +74,20 @@
        </widget>
       </item>
       <item>
+       <widget class="QLabel" name="labelPerfProfileLabel">
+        <property name="text">
+         <string>Performance Profile:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="labelPerfProfile">
+        <property name="text">
+         <string>...</string>
+        </property>
+       </widget>
+      </item>
+      <item>
        <spacer name="horizontalSpacer">
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
