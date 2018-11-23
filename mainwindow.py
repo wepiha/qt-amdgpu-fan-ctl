@@ -146,7 +146,7 @@ class Ui_MainWindow(object):
         self.labelGPUforCurrentProfileLabel.setText(_translate("MainWindow", "GPU for Current Profile:"))
         self.comboBoxCardIndex.setItemText(0, _translate("MainWindow", "0"))
         self.labelFanProfileLabel.setText(_translate("MainWindow", "Fan Profile:"))
-        self.labelFanProfileStatus.setText(_translate("MainWindow", "SYSTEM"))
+        self.labelFanProfileStatus.setText(_translate("MainWindow", "..."))
         self.labelCurrentFan.setText(_translate("MainWindow", "..."))
         self.labelFanRPMLabel.setText(_translate("MainWindow", "%"))
         self.labelTemperatureLabel.setText(_translate("MainWindow", "Temperature: "))
