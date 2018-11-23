@@ -61,14 +61,31 @@ class HwMon:
         finally:
             print("__setvalue(%s, %s) success" % (interface.name, value) )
     
+
+    @property
+    def pwm1(self):
+        return self.__getvalue(Interface.pwm1)
+    @pwm1.setter
+    def pwm1(self, value):
+        if (not isinstance(value, int)):
+            raise TypeError("value must be an integer")
+        if ((value < 0) or (value > self.pwm1_max)):
+            raise ArithmeticError("value is not within range")
+        self.__setvalue(Interface.pwm1, value)
+
+
     @property
     def pwm1_enable(self):
         return self.__getvalue(Interface.pwm1_enable)
 
     @pwm1_enable.setter
-    def pwm1_enable(self, automatic = True):
-        self.__setvalue(Interface.pwm1_enable, "2" if automatic else "1")
+    def pwm1_enable(self, pwmstate = PwmState.Auto):
+        if not isinstance(pwmstate, PwmState):
+            raise TypeError("pwmstate must be an instance of PwmState Enum")
+        
+        self.__setvalue(Interface.pwm1_enable, pwmstate.value)
     
+
     @property
     def temp1_input(self):
         return self.__getvalue(Interface.temp1_input) / 1000
@@ -80,15 +97,5 @@ class HwMon:
 
     @property
     def pwm1_max(self):
-        return self.__getvalue(Interface.pwm1_max)
-
-    @property
-    def pwm1(self):
-        fIn = self.__getvalue(Interface.pwm1)
-        fMax = self.pwm1_max
-        fRet = int((fIn / fMax) * 100)
-        
-        return fRet
-    @pwm1.setter
-    def pwm1(self, value):
-        self.__setvalue(Interface.pwm1, value)
+        return 255
+        #return self.__getvalue(Interface.pwm1_max)
