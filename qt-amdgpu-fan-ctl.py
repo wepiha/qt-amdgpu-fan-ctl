@@ -288,7 +288,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonEnable.setText(button)
         self.ui.pushButtonEnable.setChecked(PwmState(state) == PwmState.Manual)
 
-        self.ui.labelPerfProfile.setText("%d W" % hwmon.power1_average)
+        self.ui.labelPerfWatts.setText("%d W" % hwmon.power1_average)
 
     def configSave(self):
         
