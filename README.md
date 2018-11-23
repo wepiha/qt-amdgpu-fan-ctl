@@ -31,7 +31,8 @@ Allow SUDO with NOPASSWD:ALL for sudoers
 
 ### Screenshot:
 ![Image showing GUI with gpu fan curve plot and various controls](media/qt-amdgpu-fan-ctl.gif "Main GUI")
-gif/video is from and older build, this will change rapidly now the kernel interface can be added to easily
+
+Screencap is from and older build, and will change rapidly now the kernel interface can be added to easily
 
 ## Known Issues:
 - Fan speed shown on graph differs from hardware (will not fix)
