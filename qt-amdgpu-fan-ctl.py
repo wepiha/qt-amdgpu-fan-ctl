@@ -259,8 +259,6 @@ class MainWindow(QtWidgets.QMainWindow):
         fanSpeed = self.hwmon.getGPUFanPercent()
         critTemp = self.hwmon.getGPUTempCrit()
         status = self.hwmon.getStatus()
-
-        color = "green"
         
         r = 255
         g = 255
@@ -273,28 +271,32 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             r = n
             g = 0
-
-        # move InfiniteLines
-        self.getGraphItem('currTemp').setValue(gpuTemp)
-        self.getGraphItem('currFan').setValue(fanSpeed)
         
         if (status == Status.Manual):
             self.hwmon.setvalue(Interface.pwm1, targetSpeed)
             color = "#ff5d00"
-            self.getGraphItem('fTarget').setData([gpuTemp], [(targetSpeed / 255) * 100])
-            self.getGraphItem('fTarget').setPen(color)
-            self.ui.pushButtonEnable.setText("Disable")
+            button = "Disable"
+            y = [(targetSpeed / 255) * 100]
         else:
-            self.getGraphItem('fTarget').setData([gpuTemp], [fanSpeed])
-            self.getGraphItem('fTarget').setPen('#0000FF')
-            self.ui.pushButtonEnable.setText("Enable")
+            color = "#0000ff"
+            button = "Enable"
+            y = [fanSpeed]
+        
+        self.getGraphItem('fTarget').setPen(color)
+        self.getGraphItem('fTarget').setData([gpuTemp], y)
+
+        self.getGraphItem('currTemp').setValue(gpuTemp)
+        self.getGraphItem('currFan').setValue(fanSpeed)
 
         self.ui.labelCurrentTemp.setText(str(gpuTemp))
         self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, b))
 
         self.ui.labelCurrentFan.setText(str(fanSpeed))
+
         self.ui.labelFanProfileStatus.setText("  %s  " % status)
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
+        
+        self.ui.pushButtonEnable.setText(button)
 
     def configSave(self):
         
