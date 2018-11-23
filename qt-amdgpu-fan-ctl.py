@@ -8,7 +8,7 @@ import math
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from common import hwmonInterface as hw
-from common.hwmonInterface import HwMon0, PwmState
+from common.hwmonInterface import hwmon_hwmon0, PwmState
 
 import pyqtgraph as pg
 import mainwindow
@@ -92,7 +92,7 @@ class MainWindow(QtWidgets.QMainWindow):
         lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp")
         lineLabelCurrTemp = pg.InfLineLabel(lineCurrTemp, text="Temp\n", position=0.8)
         
-        lineCurrFan = pg.InfiniteLine(pos=0, angle=0, pen=pen, name="currFan")
+        lineCurrFan = pg.InfiniteLine(pos=0, pen=pen, name="currFan", angle=0)
         lineLabelCurrFan = pg.InfLineLabel(lineCurrFan, text="Fan Speed", position=0.1)
 
         textLabelXY = pg.TextItem()
@@ -100,13 +100,13 @@ class MainWindow(QtWidgets.QMainWindow):
         lineLabelCurrTemp.setAngle(90)
         lineLabelCurrFan.setAngle(0)
 
-        scatterItem = pg.ScatterPlotItem(name='tMax', pen=pg.mkPen('r'))
+        scatterItem = pg.ScatterPlotItem(pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
-        scatterItem.setData([hwmon.temp1_crit], [100], symbol='t')
+        scatterItem.setData([hwmon.temp1_crit], [100], symbol='d')
 
-        targetTemp = pg.ScatterPlotItem(name='fTarget', pen=pg.mkPen('#0000FF'))
+        targetTemp = pg.ScatterPlotItem(pen=pg.mkPen('#0000FF'))
         targetTemp._name = 'fTarget'
-        targetTemp.setData([-10], [-10], symbol='t')
+        targetTemp.setData([-10], [-10], symbol='d')
 
         legendItem = pg.LegendItem()
         legendItem.addItem(scatterItem, name='GPU tMax')
@@ -142,9 +142,8 @@ class MainWindow(QtWidgets.QMainWindow):
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
     
-    def getFanSpeedFromPlot(self):
-        
-        temp = hwmon.temp1_input
+    def getFanSpeedFromPlot(self, temp = hwmon.temp1_input):
+
         # given gpuTemp we use some trig to 
         # calculate output fan speed as a 
         # percentage of the maximum 255
@@ -167,8 +166,7 @@ class MainWindow(QtWidgets.QMainWindow):
             y2 = pts[i+1][1]
 
             if (( temp >= x1 ) and ( temp < x2)):
-                sFan = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1 
-                output = int((sFan / 100) * hwmon.pwm1_max)
+                output = (((temp - x1) / (x2 - x1)) * (y2 - y1)) + y1
                 break
 
         return output
@@ -252,16 +250,18 @@ class MainWindow(QtWidgets.QMainWindow):
     def timerTick(self):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
-        targetSpeed = self.getFanSpeedFromPlot()
-        gpuTemp = hwmon.temp1_input
-        fanSpeed = int((hwmon.pwm1 / hwmon.pwm1_max) * 100)
-        critTemp = hwmon.temp1_crit
-        state = hwmon.pwm1_enable
+        pwm1_max = hwmon.pwm1_max
+        temp1_input = hwmon.temp1_input
+        temp1_crit = hwmon.temp1_crit
+        pwm1_enable = hwmon.pwm1_enable
+
+        targetSpeed = int((self.getFanSpeedFromPlot(temp1_input) / 100) * pwm1_max)
+        fanSpeed = int((hwmon.pwm1 / pwm1_max) * 100)
         
-        r = int((gpuTemp / critTemp) * 255)
+        r = int((temp1_input / temp1_crit) * 255)
         g = 255 - r
         
-        if (PwmState(state) == PwmState.Manual):
+        if (PwmState(pwm1_enable) == PwmState.Manual):
             hwmon.pwm1 = targetSpeed
             color = "#ff5d00"
             button = "Disable"
@@ -272,23 +272,27 @@ class MainWindow(QtWidgets.QMainWindow):
             y = [fanSpeed]
         
         self.getGraphItem('fTarget').setPen(color)
-        self.getGraphItem('fTarget').setData([gpuTemp], y)
+        self.getGraphItem('fTarget').setData(temp1_input, y)
 
-        self.getGraphItem('currTemp').setValue(gpuTemp)
+        self.getGraphItem('currTemp').setValue(temp1_input)
         self.getGraphItem('currFan').setValue(fanSpeed)
 
-        self.ui.labelCurrentTemp.setText("%s °C" % gpuTemp)
-        self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, 0))
+        self.ui.labelTemperature.setText("%s °C" % temp1_input)
+        self.ui.labelTemperature.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, 0))
 
-        self.ui.labelCurrentFan.setText("%s% %" % fanSpeed)
+        self.ui.labelFanSpeed.setText("%s RPM" % hwmon.fan1_input)
 
-        self.ui.labelFanProfileStatus.setText("%s" % PwmState(state))
+        self.ui.labelFanProfileStatus.setText("%s" % PwmState(pwm1_enable))
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
 
         self.ui.pushButtonEnable.setText(button)
-        self.ui.pushButtonEnable.setChecked(PwmState(state) == PwmState.Manual)
+        self.ui.pushButtonEnable.setChecked(PwmState(pwm1_enable) == PwmState.Manual)
 
-        self.ui.labelPerfWatts.setText("%d W" % hwmon.power1_average)
+        self.ui.labelPower.setText("%.1f W" % hwmon.power1_average)
+        self.ui.labelVoltage.setText("%d mV" % hwmon.in0_input)
+
+        print(hwmon.pp_dpm_mclk_value)
+        print(hwmon.pp_dpm_sclk_value)
 
     def configSave(self):
         
