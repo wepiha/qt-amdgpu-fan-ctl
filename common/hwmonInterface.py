@@ -63,9 +63,9 @@ class PowerDPMFState(Enum):
     profile_min_mclk = "profile_min_mclk"
     profile_peak = "profile_peak"
 
-class HwMon0(Enum):
+class hwmon_hwmon0(Enum):
     def __str__(self):
-        return str(self.value)
+        return str("device/hwmon/hwmon0/%s" % self.name)
     
     pwm1 = "pwm1"
     pwm1_enable = "pwm1_enable"
@@ -73,11 +73,23 @@ class HwMon0(Enum):
     pwm1_max = "pwm1_max"
     temp1_input = "temp1_input"
     temp1_crit = "temp1_crit"
+    fan1_input = "fan1_input"
     power1_cap = "power1_cap"
     power1_average = "power1_average"
     in0_input = "in0_input"
 
-HWMON_KERNEL_PATH = "/sys/class/drm/card%s/device/hwmon/hwmon0/%s"
+class device(Enum):
+    def __str__(self):
+        return str("device/%s" % self.name)
+
+    #current_link_width = "current_link_width"
+    #current_link_speed = "current_link_speed"
+    pp_dpm_mclk = "pp_dpm_mclk"
+    pp_dpm_pcie = "pp_dpm_pcie"
+    pp_dpm_sclk =  "pp_dpm_sclk"
+
+
+HWMON_KERNEL_PATH = "/sys/class/drm/card%s/%s"
 SETPERMS_PATH = 'python3 %s/common/setperms.py %s'
 
 class HwMon:
@@ -86,12 +98,12 @@ class HwMon:
 
     def __init__(self, card = 0):
         self._card = card
-        self.__setperms(HWMON_KERNEL_PATH % (self._card, HwMon0.pwm1))
+        self.__setperms(HWMON_KERNEL_PATH % (self._card, hwmon_hwmon0.pwm1))
     
     def __getvalue(self, path):
         try:
             file = open(HWMON_KERNEL_PATH % (self._card, path), "r")
-            value = int(file.read())
+            value = file.read()
         except Exception as e:
             raise e
             
@@ -115,42 +127,73 @@ class HwMon:
 
     @property
     def pwm1(self):
-        return self.__getvalue(HwMon0.pwm1)
+        return int(self.__getvalue(hwmon_hwmon0.pwm1))
     @pwm1.setter
     def pwm1(self, value):
         if (not isinstance(value, int)):
             raise TypeError("value must be an integer")
         if ((value < 0) or (value > self.pwm1_max)):
             raise ArithmeticError("value is not within range")
-        self.__setvalue(HwMon0.pwm1, value)
+        self.__setvalue(hwmon_hwmon0.pwm1, value)
 
 
     @property
     def pwm1_enable(self):
-        return self.__getvalue(HwMon0.pwm1_enable)
+        return int(self.__getvalue(hwmon_hwmon0.pwm1_enable))
 
     @pwm1_enable.setter
     def pwm1_enable(self, pwmstate = PwmState.Auto):
         if not isinstance(pwmstate, PwmState):
             raise TypeError("pwmstate must be an instance of PwmState Enum")
         
-        self.__setvalue(HwMon0.pwm1_enable, pwmstate.value)
+        self.__setvalue(hwmon_hwmon0.pwm1_enable, pwmstate.value)
     
-
-    @property
-    def temp1_input(self):
-        return self.__getvalue(HwMon0.temp1_input) / 1000
-
-    @property
-    def temp1_crit(self):
-        tCrit = self.__getvalue(HwMon0.temp1_crit)
-        return int(tCrit / 1000)
-
     @property
     def pwm1_max(self):
         return 255
         #return self.__getvalue(Interface.pwm1_max)
 
+
+
+    @property
+    def temp1_input(self):
+        return int(self.__getvalue(hwmon_hwmon0.temp1_input)) / 1000
+
+    @property
+    def temp1_crit(self):
+        tCrit = int(self.__getvalue(hwmon_hwmon0.temp1_crit))
+        return int(tCrit / 1000)
+
+    @property
+    def fan1_input(self):
+        return int(self.__getvalue(hwmon_hwmon0.fan1_input))
+
     @property
     def power1_average(self):
-        return self.__getvalue(HwMon0.power1_average) / 1000000
+        return int(self.__getvalue(hwmon_hwmon0.power1_average)) / 1000000
+
+    @property
+    def in0_input(self):
+        return int(self.__getvalue(hwmon_hwmon0.in0_input))
+
+    @property
+    def pp_dpm_mclk(self):
+        return self.__getvalue(device.pp_dpm_mclk)
+    @property
+    def pp_dpm_mclk_value(self):
+        for line in str(self.pp_dpm_mclk).splitlines():
+            if "*" in line:
+                return line[3:-5]
+        
+        return 0
+    
+    @property
+    def pp_dpm_sclk(self):
+        return self.__getvalue(device.pp_dpm_sclk)
+    @property
+    def pp_dpm_sclk_value(self):
+        for line in str(self.pp_dpm_sclk).splitlines():
+            if "*" in line:
+                return line[3:-5]
+        
+        return 0
