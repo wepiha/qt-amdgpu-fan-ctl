@@ -5,32 +5,33 @@ Python script which enables a GUI controllable fan-curve for the AMDGPU driver u
 GNU GPLv3
 
 ### Requirements
-- Python3
-- numpy
-- pyqtgraph
 - Qt5
+- Python3
+- pyqtgraph
+- numpy
 
-You must have SUDO abilities, and NOPASSWD:ALL for sudoers
-> $USER ALL=(ALL) NOPASSWD:ALL
-
-OR
-
-Run the script as root
+You can either have run the script as root
 > sudo python3 ./qt-amdgpu-fan-ctl.py
 
+AND/OR
+
+Allow SUDO with NOPASSWD:ALL for sudoers
+> $USER ALL=(ALL) NOPASSWD:ALL
+
 ### Basic functionality:
-- Set GPU fan curve using GUI
-- Near-unlimited control points
-- Save fan curve state
-- Monitor GPU temperature
-- Monitor GPU fan speed
+- [x] Set GPU fan curve using GUI
+- [x] Near-unlimited control points
+- [x] Save fan curve state
+- [ ] Handle multiple GPU fan profiles
+- [x] Monitor GPU temperature
+- [x] Monitor GPU fan speed
+- [x] Monitor GPU power
+- [ ] Monitor a lot more
+- [ ] Configuration (log settings, SI units, enable/disable features like colorization, graph options)
 
 ### Screenshot:
 ![Image showing GUI with gpu fan curve plot and various controls](media/qt-amdgpu-fan-ctl.gif "Main GUI")
-
-### TODO:
-- Handle multiple GPU fan profiles
-- System information panel / window
+gif/video is from and older build, this will change rapidly now the kernel interface can be added to easily
 
 ## Known Issues:
 - Fan speed shown on graph differs from hardware (will not fix)
