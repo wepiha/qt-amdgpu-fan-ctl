@@ -33,6 +33,3 @@ Allow SUDO with NOPASSWD:ALL for sudoers
 ![Image showing GUI with gpu fan curve plot and various controls](media/screenshot.png "Main GUI")
 
 Screencap is from and older build, and will change rapidly now the kernel interface can be added to easily
-
-## Known Issues:
-- Fan speed shown on graph differs from hardware (will not fix)
