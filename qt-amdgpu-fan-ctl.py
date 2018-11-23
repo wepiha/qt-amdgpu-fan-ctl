@@ -130,10 +130,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def closeEvent(self, *args, **kwargs):
         if (PwmState(hwmon.pwm1_enable) == PwmState.Manual):
-            hwmon.pwm1_enable = True
+            hwmon.pwm1_enable = PwmState.Auto
 
     def setEnabled(self, value):
-        hwmon.pwm1_enable = not value
+        hwmon.pwm1_enable = PwmState.Manual if value else PwmState.Auto
 
     def setInterval(self, value):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
@@ -254,7 +254,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         targetSpeed = self.getFanSpeedFromPlot()
         gpuTemp = hwmon.temp1_input
-        fanSpeed = hwmon.pwm1
+        fanSpeed = int((hwmon.pwm1 / hwmon.pwm1_max) * 100)
         critTemp = hwmon.temp1_crit
         state = hwmon.pwm1_enable
         
