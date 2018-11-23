@@ -87,6 +87,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         graph = Graph(gv)
         graph.setData(pos=np.stack(self.myConfig[CONFIG_POINT_VAR]))
+        graph._name = 'graph'
 
         lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp")
         lineLabelCurrTemp = pg.InfLineLabel(lineCurrTemp, text="Temp\n", position=0.8)
@@ -128,7 +129,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setInterval(self.myConfig[CONFIG_INTERVAL_VAR])
 
     def closeEvent(self, *args, **kwargs):
-        if (hwmon.status() == PwmState.Manual):
+        if (PwmState(hwmon.pwm1_enable) == PwmState.Manual):
             hwmon.pwm1_enable = True
 
     def setEnabled(self, value):
@@ -157,7 +158,7 @@ class MainWindow(QtWidgets.QMainWindow):
         #       ^    
         #      (x1,y1)
         #
-        pts = self.getGraphItem(0).pos
+        pts = self.getGraphItem('graph').pos
 
         for i in range(0, len(pts) - 1):
             x1 = pts[i][0]
@@ -241,12 +242,12 @@ class MainWindow(QtWidgets.QMainWindow):
         for item in self.ui.graphicsView.plotItem.items:
             if (hasattr(item, '_name')) and (item._name == name):
                 return item
-        # always return something
-        return self.ui.graphicsView.plotItem.items[0]
+        
+        raise LookupError("The item '%s' was not found" % name)
         
     def getGraphFlatList(self):
-        shape = self.getGraphItem(None).pos.shape
-        return self.getGraphItem(None).pos.reshape(shape).tolist()
+        shape = self.getGraphItem('graph').pos.shape
+        return self.getGraphItem('graph').pos.reshape(shape).tolist()
         
     def timerTick(self):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
@@ -255,7 +256,7 @@ class MainWindow(QtWidgets.QMainWindow):
         gpuTemp = hwmon.temp1_input
         fanSpeed = hwmon.pwm1
         critTemp = hwmon.temp1_crit
-        status = hwmon.pwm1_enable
+        state = hwmon.pwm1_enable
         
         r = 255
         g = 255
@@ -269,7 +270,7 @@ class MainWindow(QtWidgets.QMainWindow):
             r = n
             g = 0
         
-        if (PwmState(status) == PwmState.Manual):
+        if (PwmState(state) == PwmState.Manual):
             hwmon.pwm1 = targetSpeed
             color = "#ff5d00"
             button = "Disable"
@@ -290,7 +291,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.labelCurrentFan.setText(str(fanSpeed))
 
-        self.ui.labelFanProfileStatus.setText("  %s  " % PwmState(status))
+        self.ui.labelFanProfileStatus.setText("  %s  " % PwmState(state))
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
 
         self.ui.pushButtonEnable.setText(button)

@@ -92,13 +92,3 @@ class HwMon:
     @pwm1.setter
     def pwm1(self, value):
         self.__setvalue(Interface.pwm1, value)
-        
-    def status(self):
-        val = self.__getvalue(Interface.pwm1_enable)
-
-        if (val == 0):
-            return PwmState.Disabled
-        elif (val == 1):
-            return PwmState.Manual
-        else:
-            return PwmState.Auto
