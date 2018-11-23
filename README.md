@@ -18,7 +18,7 @@ AND/OR
 Allow SUDO with NOPASSWD:ALL for sudoers
 > $USER ALL=(ALL) NOPASSWD:ALL
 
-### Basic functionality:
+### Functionality:
 - [x] Monitor GPU temperature, fan speed, power, clock speeds and more to come!
 - [x] Set and save GPU fan curve with near-unlimited control points
 - [ ] Handle multiple GPU fan profiles
@@ -29,4 +29,4 @@ Allow SUDO with NOPASSWD:ALL for sudoers
 ### Screenshot:
 ![Image showing GUI with gpu fan curve plot and various controls](media/screenshot.png "Main GUI")
 
-######Screencap may differ from current build
+###### Screencap may differ from current build
