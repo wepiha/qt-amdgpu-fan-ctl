@@ -19,17 +19,13 @@ Allow SUDO with NOPASSWD:ALL for sudoers
 > $USER ALL=(ALL) NOPASSWD:ALL
 
 ### Basic functionality:
-- [x] Set GPU fan curve using GUI
-- [x] Near-unlimited control points
-- [x] Save fan curve state
+- [x] Monitor GPU temperature, fan speed, power, clock speeds and more to come!
+- [x] Set and save GPU fan curve with near-unlimited control points
 - [ ] Handle multiple GPU fan profiles
-- [x] Monitor GPU temperature
-- [x] Monitor GPU fan speed
-- [x] Monitor GPU power
-- [ ] Monitor a lot more
+- [ ] Monitor and set PowerPlay profile
+- [ ] Overclocking Interface
 - [ ] Configuration (log settings, SI units, enable/disable features like colorization, graph options)
 
 ### Screenshot:
 ![Image showing GUI with gpu fan curve plot and various controls](media/screenshot.png "Main GUI")
-
-Screencap is from and older build, and will change rapidly now the kernel interface can be added to easily
+######Screencap may differ from current build
