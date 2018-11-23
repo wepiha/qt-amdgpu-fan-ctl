@@ -303,20 +303,41 @@ class MainWindow(QtWidgets.QMainWindow):
         self.myConfig[CONFIG_POINT_VAR] = self.getGraphFlatList()
 
         gpuTemp = self.getGPUTemp()
-        #fanSpeed = (self.getFanSpeedFromPlot() / 255) * 100
-        fanSpeed = self.getGPUFanPercent()
+        #fanSpeed = (self.getFanSpeedFromPlot() / 255) * 100 
+        fanSpeed = self.getGPUFanPercent() # TODO: plot this on graph as data point, replacing this line with commented code above
         ctlStatus = self.getHwmonStatus()
+        critTemp = self.getGPUTempCrit()
+
+        color = "green"
+        styleSheet = "QLabel { color: white; background-color: %s; }"
+        
+        if (ctlStatus == HWMON_STATUS_MAN):
+            self.setFanSpeedAdjustments()
+            color = "#ff5d00"
+
+        r = 255
+        g = 255
+        n = int((gpuTemp / critTemp) * 255)
+
+        if (gpuTemp <= ( critTemp / 2 )):
+            r = 0
+            g = 255 - n
+        else:
+            r = n
+            g = 0
+
+        hexstr = "#%s00" % ('{:02x}{:02x}'.format(r,g))#, '{:02x}'.format(g))
 
         self.ui.labelCurrentTemp.setText(str(gpuTemp))
+        self.ui.labelCurrentTemp.setStyleSheet(styleSheet % hexstr)
+
         self.ui.labelCurrentFan.setText(str(fanSpeed))
-        self.ui.labelFanProfileStatus.setText(ctlStatus)
+        self.ui.labelFanProfileStatus.setText("  %s  " % ctlStatus)
+        self.ui.labelFanProfileStatus.setStyleSheet("QLabel { color: white; background-color: %s; }" % color)
 
         # move InfiniteLines
         self.getGraphItem('currTemp').setValue(gpuTemp)
         self.getGraphItem('currFan').setValue(fanSpeed)
-        
-        if (ctlStatus == HWMON_STATUS_MAN):
-            self.setFanSpeedAdjustments()
         
     def configSave(self):
         
