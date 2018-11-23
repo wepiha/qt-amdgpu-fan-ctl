@@ -277,18 +277,18 @@ class MainWindow(QtWidgets.QMainWindow):
         self.getGraphItem('currTemp').setValue(gpuTemp)
         self.getGraphItem('currFan').setValue(fanSpeed)
 
-        self.ui.labelCurrentTemp.setText(str(gpuTemp))
+        self.ui.labelCurrentTemp.setText("%s °C" % gpuTemp)
         self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, 0))
 
-        self.ui.labelCurrentFan.setText(str(fanSpeed))
+        self.ui.labelCurrentFan.setText("%s% %" % fanSpeed)
 
-        self.ui.labelFanProfileStatus.setText("  %s  " % PwmState(state))
+        self.ui.labelFanProfileStatus.setText("%s" % PwmState(state))
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
 
         self.ui.pushButtonEnable.setText(button)
         self.ui.pushButtonEnable.setChecked(PwmState(state) == PwmState.Manual)
 
-        self.ui.labelPerfProfile.setText("%dW" % hwmon.power1_average)
+        self.ui.labelPerfProfile.setText("%d W" % hwmon.power1_average)
 
     def configSave(self):
         
