@@ -8,7 +8,7 @@ import math
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from common import hwmonInterface as hw
-from common.hwmonInterface import Interface, PwmState
+from common.hwmonInterface import HwMon0, PwmState
 
 import pyqtgraph as pg
 import mainwindow
@@ -258,17 +258,8 @@ class MainWindow(QtWidgets.QMainWindow):
         critTemp = hwmon.temp1_crit
         state = hwmon.pwm1_enable
         
-        r = 255
-        g = 255
-        b = 0
-        n = int((gpuTemp / critTemp) * 255)
-
-        if (gpuTemp <= ( critTemp / 2 )):
-            r = 0
-            g = 255 - n
-        else:
-            r = n
-            g = 0
+        r = int((gpuTemp / critTemp) * 255)
+        g = 255 - r
         
         if (PwmState(state) == PwmState.Manual):
             hwmon.pwm1 = targetSpeed
@@ -287,7 +278,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.getGraphItem('currFan').setValue(fanSpeed)
 
         self.ui.labelCurrentTemp.setText(str(gpuTemp))
-        self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, b))
+        self.ui.labelCurrentTemp.setStyleSheet(QLABEL_STYLE_SHEET % '#{:02x}{:02x}{:02x}'.format(r, g, 0))
 
         self.ui.labelCurrentFan.setText(str(fanSpeed))
 
@@ -296,6 +287,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.pushButtonEnable.setText(button)
         self.ui.pushButtonEnable.setChecked(PwmState(state) == PwmState.Manual)
+
+        self.ui.labelPerfProfile.setText("%dW" % hwmon.power1_average)
 
     def configSave(self):
         
