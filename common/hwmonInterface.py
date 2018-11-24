@@ -43,15 +43,16 @@ from enum import Enum
 #     fan[1-*]_target: Desired fan speed Unit: revolution/min (RPM)
 #     fan[1-*]_enable: Enable or disable the sensors.1: Enable 0: Disable
 
+HWMON_SYSFS_PATH = "/sys/class/drm/card%s/%s"
 
-class PwmState(Enum):
+class accepted_pwm1_enable(Enum):
     def __str__(self):
         return str(self.name)
     Disabled = 0
     Manual = 1
     Auto = 2
 
-class PowerDPMFState(Enum):
+class accepted_power_dpm_force_performance_level(Enum):
     def __str__(self):
         return str(self.name)
     Auto = "auto"
@@ -63,7 +64,11 @@ class PowerDPMFState(Enum):
     profile_min_mclk = "profile_min_mclk"
     profile_peak = "profile_peak"
 
-class hwmon_hwmon0(Enum):
+class sysfs_device_hwmon_hwmon0(Enum):
+    """
+    Enums that are related to sysfs interfaces found in
+    /sys/class/drm/cardN/device/hwmon/hwmon0/
+    """
     def __str__(self):
         return str("device/hwmon/hwmon0/%s" % self.name)
     
@@ -78,7 +83,11 @@ class hwmon_hwmon0(Enum):
     power1_average = "power1_average"
     in0_input = "in0_input"
 
-class device(Enum):
+class sysfs_device(Enum):
+    """
+    Enums that are related to sysfs interfaces found in
+    /sys/class/drm/cardN/device/
+    """
     def __str__(self):
         return str("device/%s" % self.name)
 
@@ -87,10 +96,55 @@ class device(Enum):
     pp_dpm_mclk = "pp_dpm_mclk"
     pp_dpm_pcie = "pp_dpm_pcie"
     pp_dpm_sclk =  "pp_dpm_sclk"
+    pp_power_profile_mode = "pp_power_profile_mode"
 
+class pp_power_profile:
+    def __init__(self, data):
+        if "*:" in data:
+            data[2] = "True"
+        else:
+            data.insert(2, "False")
 
-HWMON_SYSFS_PATH = "/sys/class/drm/card%s/%s"
-SETPERMS_PATH = 'python3 %s/common/setperms.py %s'
+        self.__data = {
+            "NUM" : data[0],
+            "MODE_NAME" : data[1].replace(":", "").replace("_", " "),
+            "ACTIVE" : data[2],
+            "SCLK_UP_HYST" : data[3],
+            "SCLK_DOWN_HYST" : data[4],
+            "SCLK_ACTIVE_LEVEL" : data[5],
+            "MCLK_UP_HYST" : data[6],
+            "MCLK_DOWN_HYST" : data[7],
+            "MCLK_ACTIVE_LEVEL" : data[0]
+        }
+
+    @property 
+    def num(self):
+        return self.__data["NUM"]
+    @property
+    def active(self):
+        return self.__data["ACTIVE"]
+    @property 
+    def mode_name(self):
+        return self.__data["MODE_NAME"]
+    @property 
+    def sclk_up_hyst(self):
+        return self.__data["SCLK_UP_HYST"]
+    @property 
+    def sclk_down_hyst(self):
+        return self.__data["SCLK_DOWN_HYST"]
+    @property 
+    def sclk_active_level(self):
+        return self.__data["SCLK_ACTIVE_LEVEL"]
+    @property 
+    def mclk_up_hyst(self):
+        return self.__data["MCLK_UP_HYST"]
+    @property 
+    def mclk_down_hyst(self):
+        return self.__data["MCLK_DOWN_HYST"]
+    @property 
+    def mclk_active_level(self):
+        return self.__data["MCLK_ACTIVE_LEVEL"]
+
 
 class HwMon:
     def __init__(self, card = 0):
@@ -122,32 +176,32 @@ class HwMon:
     
     @property
     def pwm1(self):
+        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.pwm1))
+    @pwm1.setter
+    def pwm1(self, value):
         """
         pulse width modulation fan level (0-255)
         """
-        return int(self.__getvalue(hwmon_hwmon0.pwm1))
-    @pwm1.setter
-    def pwm1(self, value):
         if (not isinstance(value, int)):
             raise TypeError("value must be an integer")
         if ((value < 0) or (value > self.pwm1_max)):
             raise ArithmeticError("value is not within range")
-        self.__setvalue(hwmon_hwmon0.pwm1, value)
+        self.__setvalue(sysfs_device_hwmon_hwmon0.pwm1, value)
 
 
     @property
     def pwm1_enable(self):
+        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.pwm1_enable))
+
+    @pwm1_enable.setter
+    def pwm1_enable(self, pwmstate = accepted_pwm1_enable.Auto):
         """
         pulse width modulation fan control method (0: no fan speed control, 1: manual fan speed control using pwm interface, 2: automatic fan speed control)
         """
-        return int(self.__getvalue(hwmon_hwmon0.pwm1_enable))
-
-    @pwm1_enable.setter
-    def pwm1_enable(self, pwmstate = PwmState.Auto):
-        if not isinstance(pwmstate, PwmState):
+        if not isinstance(pwmstate, accepted_pwm1_enable):
             raise TypeError("pwmstate must be an instance of PwmState Enum")
         
-        self.__setvalue(hwmon_hwmon0.pwm1_enable, pwmstate.value)
+        self.__setvalue(sysfs_device_hwmon_hwmon0.pwm1_enable, pwmstate.value)
     
     @property
     def pwm1_min(self):
@@ -170,66 +224,101 @@ class HwMon:
         """
         the on die GPU temperature in millidegrees Celsius
         """
-        return int(self.__getvalue(hwmon_hwmon0.temp1_input))
+        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.temp1_input))
 
     @property
     def temp1_crit(self):
         """
         temperature critical max value in millidegrees Celsius
         """
-        return int(int(self.__getvalue(hwmon_hwmon0.temp1_crit)))
+        return int(int(self.__getvalue(sysfs_device_hwmon_hwmon0.temp1_crit)))
 
     @property
     def fan1_input(self):
         """
         fan speed in RPM
         """
-        return int(self.__getvalue(hwmon_hwmon0.fan1_input))
+        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.fan1_input))
 
     @property
     def power1_average(self):
         """
         average power used by the GPU in microWatts
         """
-        return int(self.__getvalue(hwmon_hwmon0.power1_average))
+        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.power1_average))
 
     @property
     def in0_input(self):
         """
         the voltage on the GPU in millivolts
         """
-        return int(self.__getvalue(hwmon_hwmon0.in0_input))
+        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.in0_input))
 
     @property
-    def pp_dpm_mclk(self, strip = True):
+    def pp_dpm_mclk(self):
         """
-        When requesting pp_dpm_mclk you may optionally choose to keep 
-        all available clock setting data instead of returning only the 
-        current setting
+        available power levels within the power state and the clock information for those levels
+        use pp_dpm_mclk_mhz to retrieve the current state in megahertz
         """
-        value = self.__getvalue(device.pp_dpm_mclk)
-        if (not strip):
-            return value
-        else:
-            for line in str(value).splitlines():
-                if "*" in line:
-                    return line[3:-5]
-            
+        for line in str(self.__getvalue(sysfs_device.pp_dpm_mclk)).splitlines():
+            if "*" in line:
+                return line[3:-5]
+
         return 0
-    
+
     @property
-    def pp_dpm_sclk(self, strip = True):
+    def pp_dpm_mclk_mhz(self):
         """
-        When requesting pp_dpm_sclk you may optionally choose to keep 
-        all available clock setting data instead of returning only the 
-        current setting
+        current power level state memory clock in megahertz 
         """
-        value = self.__getvalue(device.pp_dpm_sclk)
-        if (not strip):
-            return value
-        else:
-            for line in str(value).splitlines():
-                if "*" in line:
-                    return line[3:-5]
-            
+        for line in str(self.__getvalue(sysfs_device.pp_dpm_mclk)).splitlines():
+            if "*" in line:
+                return line[3:-5]
+
         return 0
+
+    @property
+    def pp_dpm_sclk(self):
+        """
+        available power levels within the power state and the clock information for those levels 
+        use pp_dpm_sclk_mhz to retrieve the current state in megahertz
+        """
+        return self.__getvalue(sysfs_device.pp_dpm_sclk)
+
+    @property
+    def pp_dpm_sclk_mhz(self):
+        """
+        current power level state core clock in megahertz 
+        """
+        for line in str(self.__getvalue(sysfs_device.pp_dpm_sclk)).splitlines():
+            if "*" in line:
+                return line[3:-5]
+
+    @property
+    def pp_power_profile_mode(self):
+        """
+        The amdgpu driver provides a sysfs API for adjusting the heuristics 
+        related to switching between power levels in a power state. 
+        use pp_power_profile_mode_index to return the current number
+        """
+        return self.__getvalue(sysfs_device.pp_power_profile_mode)
+    @property
+    def pp_power_profile_list(self):
+        """
+        list of pp_power_profiles containing all data read from pp_power_profile_mode
+        """
+        result = []
+
+        lines = str(self.pp_power_profile_mode).splitlines()
+        del lines[0]
+
+        for line in lines:
+            result.append ( pp_power_profile(line.split()) )
+
+        return result
+
+    @property
+    def pp_power_profile_mode_active(self):
+        for profile in self.pp_power_profile_list:
+            if (profile.active):
+                return profile
