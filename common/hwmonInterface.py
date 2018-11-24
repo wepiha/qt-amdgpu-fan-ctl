@@ -55,10 +55,10 @@ class accepted_pwm1_enable(Enum):
 class accepted_power_dpm_force_performance_level(Enum):
     def __str__(self):
         return str(self.name)
-    Auto = "auto"
-    Low = "low"
-    High = "high"
-    Manual = "manual"
+    auto = "auto"
+    low = "low"
+    high = "high"
+    manual = "manual"
     profile_standard = "profile_standard"
     profile_min_sclk = "profile_min_sclk"
     profile_min_mclk = "profile_min_mclk"
@@ -97,7 +97,11 @@ class sysfs_device(Enum):
     pp_dpm_pcie = "pp_dpm_pcie"
     pp_dpm_sclk =  "pp_dpm_sclk"
     pp_power_profile_mode = "pp_power_profile_mode"
+    power_dpm_force_performance_level = "power_dpm_force_performance_level"
 
+class power_dpm_force_performance_level_profile:
+    def __init__(self, data):
+        pass
 class pp_power_profile:
     def __init__(self, data):
         if "*:" in data:
@@ -299,7 +303,7 @@ class HwMon:
         """
         The amdgpu driver provides a sysfs API for adjusting the heuristics 
         related to switching between power levels in a power state. 
-        use pp_power_profile_mode_index to return the current number
+        use pp_power_profile_mode_index to return the current index
         """
         return self.__getvalue(sysfs_device.pp_power_profile_mode)
     @property
@@ -322,3 +326,30 @@ class HwMon:
         for profile in self.pp_power_profile_list:
             if (profile.active):
                 return profile
+
+    @property
+    def power_dpm_force_performance_level(self):
+        return self.__getvalue(sysfs_device.power_dpm_force_performance_level)
+    @property
+    def power_dpm_force_performance_level_list(self):
+        """
+        list of available power_dpm_force_performance_levels
+        """
+        result = []
+
+        lines = str(self.power_dpm_force_performance_level).splitlines()
+        del lines[0]
+
+        for line in lines:
+            result.append ( power_dpm_force_performance_level_profile(line.split()) )
+
+        return result
+    @power_dpm_force_performance_level.setter
+    def power_dpm_force_performance_level(self, value):
+        """
+        control available power related parameters
+        """
+        if not isinstance(value, accepted_power_dpm_force_performance_level):
+            raise TypeError("value must be an instance of accepted_power_dpm_force_performance_level")
+        if (sysfs_device.power_dpm_force_performance_level.value != value.value):
+            self.__setvalue(sysfs_device.power_dpm_force_performance_level, value.value)
