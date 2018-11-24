@@ -8,7 +8,7 @@ import math
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 from common import hwmonInterface as hw
-from common.hwmonInterface import hwmon_hwmon0, PwmState
+from common.hwmonInterface import *
 
 import pyqtgraph as pg
 import mainwindow
@@ -87,7 +87,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp", angle=270)
         lineCurrFan = pg.InfiniteLine(pos=0, pen=pen, name="currFan", angle=0)
-        
+
         pg.InfLineLabel(lineCurrTemp, text="Temperature", position=0.7, rotateAxis=(2,0))
         pg.InfLineLabel(lineCurrFan, text="Fan Speed", position=0.15, rotateAxis=(0,0))
 
@@ -95,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         scatterItem = pg.ScatterPlotItem(pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
-        scatterItem.setData([hwmon.temp1_crit], [100], symbol='d')
+        scatterItem.setData([hwmon.temp1_crit / 1000], [100], symbol='d')
 
         targetTemp = pg.ScatterPlotItem(pen=pg.mkPen('#0000FF'))
         targetTemp._name = 'fTarget'
@@ -117,13 +117,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.pushButtonAdd.clicked.connect(graph.addPoint)
         self.ui.pushButtonRemove.clicked.connect(graph.removePoint)
+
+
+        for profile in hwmon.pp_power_profile_list:
+            self.ui.comboBoxPerformanceProfile.addItem(profile.mode_name.title())
   
     def closeEvent(self, *args, **kwargs):
-        if (PwmState(hwmon.pwm1_enable) == PwmState.Manual):
-            hwmon.pwm1_enable = PwmState.Auto
+        if (accepted_pwm1_enable(hwmon.pwm1_enable) == accepted_pwm1_enable.Manual):
+            hwmon.pwm1_enable = accepted_pwm1_enable.Auto
 
     def buttonEnableClicked(self, value):
-        hwmon.pwm1_enable = PwmState.Manual if value else PwmState.Auto
+        hwmon.pwm1_enable = accepted_pwm1_enable.Manual if value else accepted_pwm1_enable.Auto
 
     def spinBoxIntervalChanged(self, value):
         self.myConfig[CONFIG_INTERVAL_VAR] = str(value)
@@ -143,8 +147,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.myConfig[CONFIG_POINT_VAR] = self.getSceneItem('graph').pos.tolist()
 
         pwm1_max = hwmon.pwm1_max
-        temp1_input = hwmon.temp1_input
-        temp1_crit = hwmon.temp1_crit
+        temp1_input = hwmon.temp1_input / 1000
+        temp1_crit = hwmon.temp1_crit / 1000
         pwm1_enable = hwmon.pwm1_enable
 
         targetSpeed = int((self.getSceneItem('graph').getIntersection(x=temp1_input) / 100) * pwm1_max)
@@ -153,7 +157,7 @@ class MainWindow(QtWidgets.QMainWindow):
         r = int((temp1_input / temp1_crit) * 255)
         g = 255 - r
         
-        if (PwmState(pwm1_enable) == PwmState.Manual):
+        if (accepted_pwm1_enable(pwm1_enable) == accepted_pwm1_enable.Manual):
             hwmon.pwm1 = targetSpeed
             color = "#ff5d00"
             button = "Disable"
@@ -174,17 +178,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.labelFanSpeed.setText("%s RPM" % hwmon.fan1_input)
 
-        self.ui.labelFanProfileStatus.setText("%s" % PwmState(pwm1_enable))
+        self.ui.labelFanProfileStatus.setText("%s" % accepted_pwm1_enable(pwm1_enable))
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
 
         self.ui.pushButtonEnable.setText(button)
-        self.ui.pushButtonEnable.setChecked(PwmState(pwm1_enable) == PwmState.Manual)
+        self.ui.pushButtonEnable.setChecked(accepted_pwm1_enable(pwm1_enable) == accepted_pwm1_enable.Manual)
 
-        self.ui.labelPower.setText("%.1f W" % hwmon.power1_average)
+        self.ui.labelPower.setText("%.1f W" % (hwmon.power1_average / 1000000))
         self.ui.labelVoltage.setText("%d mV" % hwmon.in0_input)
 
-        self.ui.labelMemClock.setText("%s MHz" % hwmon.pp_dpm_mclk_value)
-        self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_value)
+        self.ui.labelMemClock.setText("%s MHz" % hwmon.pp_dpm_mclk_mhz)
+        self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_mhz)
 
     def buttonSaveClicked(self):
         
