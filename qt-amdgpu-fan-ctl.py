@@ -57,6 +57,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonEnable.clicked.connect(self.buttonEnableClicked)
         self.ui.pushButtonSave.clicked.connect(self.buttonSaveClicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
+        self.ui.comboBoxPowerProfile.currentTextChanged.connect(self.comboBoxPowerProfile)
         self.timer.timeout.connect(self.timerTick)
         self.timer.start()
         self.spinBoxIntervalChanged(self.myConfig[CONFIG_INTERVAL_VAR])
@@ -104,7 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
         legendItem = pg.LegendItem()
         legendItem.addItem(scatterItem, name='GPU tMax')
         legendItem.addItem(targetTemp, name='Fan Target')
-        legendItem.setPos(85, 30)
+        legendItem.setPos(70, 40)
 
         gv.addItem(graph)
         gv.addItem(lineCurrTemp)
@@ -118,9 +119,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonAdd.clicked.connect(graph.addPoint)
         self.ui.pushButtonRemove.clicked.connect(graph.removePoint)
 
-
-        for profile in hwmon.pp_power_profile_list:
-            self.ui.comboBoxPerformanceProfile.addItem(profile.mode_name.title())
+        for level in accepted_power_dpm_force_performance_level:
+            self.ui.comboBoxPowerProfile.addItem(level.name.title())
   
     def closeEvent(self, *args, **kwargs):
         if (accepted_pwm1_enable(hwmon.pwm1_enable) == accepted_pwm1_enable.Manual):
@@ -136,6 +136,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
     
+    def comboBoxPowerProfile(self, value):
+        for level in accepted_power_dpm_force_performance_level:
+            if (str(value.lower()) == str(level)):
+                hwmon.power_dpm_force_performance_level = level
+
     def getSceneItem(self, name):
         for item in self.ui.graphicsView.plotItem.items:
             if (hasattr(item, '_name')) and (item._name == name):
@@ -189,6 +194,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.labelMemClock.setText("%s MHz" % hwmon.pp_dpm_mclk_mhz)
         self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_mhz)
+
+        self.ui.comboBoxPowerProfile.setCurrentText(hwmon.power_dpm_force_performance_level.title())
 
     def buttonSaveClicked(self):
         
