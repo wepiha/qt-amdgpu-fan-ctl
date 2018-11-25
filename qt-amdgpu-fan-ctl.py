@@ -83,20 +83,20 @@ class MainWindow(QtWidgets.QMainWindow):
             maxYRange = VIEW_LIMITER
         )
 
-        graph = Graph(gv, data=self.myConfig[CONFIG_POINT_VAR], name='graph')
+        graph = Graph(gv, data=self.myConfig[CONFIG_POINT_VAR], name='graph', staticPos=[hwmon.temp1_crit / 1000, 100])
         pen = pg.mkPen('w', width=0.2, style=QtCore.Qt.DashLine)
 
         lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name="currTemp", angle=270)
         lineCurrFan = pg.InfiniteLine(pos=0, pen=pen, name="currFan", angle=0)
 
-        pg.InfLineLabel(lineCurrTemp, text="Temperature", position=0.7, rotateAxis=(2,0))
-        pg.InfLineLabel(lineCurrFan, text="Fan Speed", position=0.15, rotateAxis=(0,0))
+        pg.InfLineLabel(lineCurrTemp, text="Temp", position=0.7, rotateAxis=(2,0))
+        pg.InfLineLabel(lineCurrFan, text="Fan", position=0.15, rotateAxis=(0,0))
 
         textLabelXY = pg.TextItem()
 
         scatterItem = pg.ScatterPlotItem(pen=pg.mkPen('r'))
         scatterItem._name = 'tMax'
-        scatterItem.setData([hwmon.temp1_crit / 1000], [100], symbol='d')
+        scatterItem.setData([int(hwmon.temp1_crit / 1000)], [100], symbol='d')
 
         targetTemp = pg.ScatterPlotItem(pen=pg.mkPen('#0000FF'))
         targetTemp._name = 'fTarget'
@@ -105,7 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
         legendItem = pg.LegendItem()
         legendItem.addItem(scatterItem, name='GPU tMax')
         legendItem.addItem(targetTemp, name='Fan Target')
-        legendItem.setPos(70, 40)
+        legendItem.setPos(0, 100)
 
         gv.addItem(graph)
         gv.addItem(lineCurrTemp)
@@ -239,23 +239,37 @@ class MainWindow(QtWidgets.QMainWindow):
 class Graph(pg.GraphItem):
     MIN_POINT_DISTANCE = 16
 
-    def __init__(self, parent, data, name):
+    def __init__(self, parent, data, name, staticPos=None):
         self.dragPoint = None
         self.dragOffset = None
         self.plotWidget = parent
         self._name = name
         
+        self.staticPos = staticPos
+
         pg.GraphItem.__init__(self)
         self.setData(pos=np.stack(data))
 
     def setData(self, **kwds):
         self.data = kwds
         if 'pos' in self.data:
+
+            pos = self.data['pos'].tolist()
+
+            if (pos[0] != [0, 0]):
+                pos.insert(0, [0, 0])
+
+            if (self.staticPos) and (pos[len(pos) - 1] != self.staticPos):
+                pos.append(self.staticPos)
+                self.setData(pos=np.stack(pos))
+                return
+
             npts = self.data['pos'].shape[0]
             self.data['adj'] = np.column_stack((np.arange(0, npts-1), np.arange(1, npts)))
             self.data['data'] = np.empty(npts, dtype=[('index', int)])
             self.data['data']['index'] = np.arange(npts)
-        self.updateGraph()
+
+            self.updateGraph()
     def updateGraph(self):
         pg.GraphItem.setData(self, **self.data)
 
