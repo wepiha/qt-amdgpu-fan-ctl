@@ -3,11 +3,11 @@
 import sys, os
 import json
 import pyqtgraph as pg
-import mainwindow
-
+import ui.mainwindow as mainwindow
+ 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
-from common import hwmonInterface as hw
+from common import hwmonInterface
 from common.fancurvegraph  import FanCurveGraph
 from common.config import *
 
@@ -18,7 +18,7 @@ QLABEL_STYLE_SHEET = "QLabel { color: white; background-color: %s; }"
 
 lastCardIndex = 0
 lastCtlValue = -1
-hwmon = hw.HwMon()
+hwmon = hwmonInterface.HwMon()
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -80,7 +80,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         legendItem = pg.LegendItem()
         legendItem.addItem(scatterItem, name='GPU tMax')
-        legendItem.addItem(targetTemp, name='Fan Target')
+        legendItem.addItem(targetTemp, name='Fan PWM')
         legendItem.setPos(0, 100)
 
         gv.addItem(graph)
@@ -95,15 +95,16 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonAdd.clicked.connect(graph.addPoint)
         self.ui.pushButtonRemove.clicked.connect(graph.removePoint)
 
-        for level in hw.accepted_power_dpm_force_performance_level:
+        for level in hwmonInterface.accepted_power_dpm_force_performance_level:
             self.ui.comboBoxPowerProfile.addItem(level.name.title())
+
   
     def closeEvent(self, *args, **kwargs):
-        if (hw.accepted_pwm1_enable(hwmon.pwm1_enable) == hw.accepted_pwm1_enable.Manual):
-            hwmon.pwm1_enable = hw.accepted_pwm1_enable.Auto
+        if (hwmonInterface.accepted_pwm1_enable(hwmon.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
+            hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Auto
 
     def buttonEnableClicked(self, value):
-        hwmon.pwm1_enable = hw.accepted_pwm1_enable.Manual if value else hw.accepted_pwm1_enable.Auto
+        hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Manual if value else hwmonInterface.accepted_pwm1_enable.Auto
     def buttonSaveClicked(self):
         self.myConfig.save()
 
@@ -115,9 +116,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self.ui.spinBoxInterval.setValue(int(value))
     
     def comboBoxPowerProfile(self, value):
-        for level in hw.accepted_power_dpm_force_performance_level:
+        for level in hwmonInterface.accepted_power_dpm_force_performance_level:
             if (str(value.lower()) == str(level)):
                 hwmon.power_dpm_force_performance_level = level
+
+        hwmon.pp_dpm_sclk = [0]
+        hwmon.pp_dpm_mclk = [0]
 
     def getSceneItem(self, name):
         for item in self.ui.graphicsView.plotItem.items:
@@ -140,7 +144,7 @@ class MainWindow(QtWidgets.QMainWindow):
         r = int((temp1_input / temp1_crit) * 255)
         g = 255 - r
         
-        if (hw.accepted_pwm1_enable(pwm1_enable) == hw.accepted_pwm1_enable.Manual):
+        if (hwmonInterface.accepted_pwm1_enable(pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
             hwmon.pwm1 = targetSpeed
             color = "#ff5d00"
             button = "Disable"
@@ -161,11 +165,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.labelFanSpeed.setText("%s RPM" % hwmon.fan1_input)
 
-        self.ui.labelFanProfileStatus.setText("%s" % hw.accepted_pwm1_enable(pwm1_enable))
+        self.ui.labelFanProfileStatus.setText("%s" % hwmonInterface.accepted_pwm1_enable(pwm1_enable))
         self.ui.labelFanProfileStatus.setStyleSheet(QLABEL_STYLE_SHEET % color)
 
         self.ui.pushButtonEnable.setText(button)
-        self.ui.pushButtonEnable.setChecked(hw.accepted_pwm1_enable(pwm1_enable) == hw.accepted_pwm1_enable.Manual)
+        self.ui.pushButtonEnable.setChecked(hwmonInterface.accepted_pwm1_enable(pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual)
 
         self.ui.labelPower.setText("%.1f W" % (hwmon.power1_average / 1000000))
         self.ui.labelVoltage.setText("%d mV" % hwmon.in0_input)
@@ -174,6 +178,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_mhz)
 
         self.ui.comboBoxPowerProfile.setCurrentText(hwmon.power_dpm_force_performance_level.title())
+
+        self.ui.labelPowerProfile.setText(hwmon.pp_power_profile_mode_active.mode_name.title())
 
 app = QtWidgets.QApplication(sys.argv)
 
