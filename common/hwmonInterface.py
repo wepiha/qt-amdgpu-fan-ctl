@@ -64,6 +64,13 @@ class accepted_power_dpm_force_performance_level(Enum):
     profile_min_mclk = "profile_min_mclk"
     profile_peak = "profile_peak"
 
+class accepted_power_dpm_state(Enum):
+    def __str__(self):
+        return str(self.name)
+    battery = "battery"
+    balanced = "balanced"
+    performance = "performance"
+
 class sysfs_device_hwmon_hwmon0(Enum):
     """
     Enums that are related to sysfs interfaces found in
@@ -96,6 +103,7 @@ class sysfs_device(Enum):
     pp_dpm_mclk = "pp_dpm_mclk"
     pp_dpm_pcie = "pp_dpm_pcie"
     pp_dpm_sclk =  "pp_dpm_sclk"
+    power_dpm_state = "power_dpm_state"
     pp_power_profile_mode = "pp_power_profile_mode"
     power_dpm_force_performance_level = "power_dpm_force_performance_level"
 
@@ -175,9 +183,9 @@ class HwMon:
                 file.write(str(value))
         except Exception as e:
             print("__setvalue(%s, %s) failed: %s" % (interface.name, value, e))
-        finally:
+        else:
             print("__setvalue(%s, %s) success" % (interface.name, value) )
-    
+
     @property
     def pwm1(self):
         return int(self.__getvalue(sysfs_device_hwmon_hwmon0.pwm1))
@@ -203,7 +211,7 @@ class HwMon:
         pulse width modulation fan control method (0: no fan speed control, 1: manual fan speed control using pwm interface, 2: automatic fan speed control)
         """
         if not isinstance(pwmstate, accepted_pwm1_enable):
-            raise TypeError("pwmstate must be an instance of PwmState Enum")
+            raise TypeError("pwmstate must be an instance of accepted_pwm1_enable Enum")
         
         self.__setvalue(sysfs_device_hwmon_hwmon0.pwm1_enable, pwmstate.value)
     
@@ -329,9 +337,9 @@ class HwMon:
             if (not level in range(len(data) - 1)):
                 raise ArithmeticError("level %d is out-of-range (range:0-%d)" % (level, len(levels)))
                 
-            print("enabling pp_dpm_sclk: %d (%s)" %(level, data[level]))
-
+            #print("enabling pp_dpm_sclk: %d (%s)" %(level, data[level]))
             output = "%s %d" % (output, level)
+        #print("pp_dpm_sclk ")
         self.__setvalue(sysfs_device.pp_dpm_sclk, output)
 
     @property
@@ -351,6 +359,16 @@ class HwMon:
         use pp_power_profile_mode_index to return the current index
         """
         return self.__getvalue(sysfs_device.pp_power_profile_mode)
+    @pp_power_profile_mode.setter
+    def pp_power_profile_mode(self, value):
+        values = self.pp_power_profile_list
+
+        if not isinstance(value, int):
+            raise TypeError("value must be an integer")
+        if (not value in range(len(values) - 1)):
+            raise ArithmeticError("value %d is out-of-range (range:0-%d)" % (value, len(values)))
+        
+        self.__setvalue(sysfs_device.pp_power_profile_mode, value)
     @property
     def pp_power_profile_list(self):
         """
@@ -398,3 +416,16 @@ class HwMon:
             raise TypeError("value must be an instance of accepted_power_dpm_force_performance_level")
         if (sysfs_device.power_dpm_force_performance_level.value != value.value):
             self.__setvalue(sysfs_device.power_dpm_force_performance_level, value.value)
+        
+    @property
+    def power_dpm_state(self):
+        return self.__getvalue(sysfs_device.power_dpm_state)
+    @power_dpm_state.setter
+    def power_dpm_state(self, value):
+        """
+        deprecated function added for older hardware
+        """
+        if not isinstance(value, accepted_power_dpm_state):
+            raise TypeError("value must be an instance of accepted_power_dpm_state")
+        if (sysfs_device.power_dpm_state.value != value.value):
+            self.__setvalue(sysfs_device.power_dpm_state, value.value)
