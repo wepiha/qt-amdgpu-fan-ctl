@@ -264,11 +264,32 @@ class HwMon:
         available power levels within the power state and the clock information for those levels
         use pp_dpm_mclk_mhz to retrieve the current state in megahertz
         """
-        for line in str(self.__getvalue(sysfs_device.pp_dpm_mclk)).splitlines():
-            if "*" in line:
-                return line[3:-5]
+        return self.__getvalue(sysfs_device.pp_dpm_mclk)
+    @pp_dpm_mclk.setter
+    def pp_dpm_mclk(self, levels):
+        """
+        available power levels within the power state and the clock information for those levels 
+        specify a list of integers that contain the levels to be enabled, you may use -1 to enable all levels
+        """
+        data = str(self.pp_dpm_mclk).splitlines()
+        output = ''
 
-        return 0
+        if (levels == -1):
+            levels = range(len(data) - 1)
+        else:
+            if not isinstance(levels, list):
+                raise TypeError("levels must be a list")
+            if not all(isinstance(i, int) for i in levels):
+                raise TypeError("levels must only contain a list of integers")
+
+        for level in sorted(levels):
+            if (not level in range(len(data) - 1)):
+                raise ArithmeticError("level %d is out-of-range (range:0-%d)" % (level, len(levels)))
+                
+            print("enabling pp_dpm_mclk: %d (%s)" %(level, data[level]))
+
+            output = "%s %d" % (output, level)
+        self.__setvalue(sysfs_device.pp_dpm_mclk, output)
 
     @property
     def pp_dpm_mclk_mhz(self):
@@ -285,9 +306,33 @@ class HwMon:
     def pp_dpm_sclk(self):
         """
         available power levels within the power state and the clock information for those levels 
-        use pp_dpm_sclk_mhz to retrieve the current state in megahertz
         """
         return self.__getvalue(sysfs_device.pp_dpm_sclk)
+    @pp_dpm_sclk.setter
+    def pp_dpm_sclk(self, levels):
+        """
+        available power levels within the power state and the clock information for those levels 
+        specify a list of integers that contain the levels to be enabled, you may use -1 to enable all levels
+        """
+        data = str(self.pp_dpm_sclk).splitlines()
+        output = ''
+
+        if (levels == -1):
+            levels = range(len(data) - 1)
+        else:
+            if not isinstance(levels, list):
+                raise TypeError("levels must be a list")
+            if not all(isinstance(i, int) for i in levels):
+                raise TypeError("levels must only contain a list of integers")
+
+        for level in sorted(levels):
+            if (not level in range(len(data) - 1)):
+                raise ArithmeticError("level %d is out-of-range (range:0-%d)" % (level, len(levels)))
+                
+            print("enabling pp_dpm_sclk: %d (%s)" %(level, data[level]))
+
+            output = "%s %d" % (output, level)
+        self.__setvalue(sysfs_device.pp_dpm_sclk, output)
 
     @property
     def pp_dpm_sclk_mhz(self):
