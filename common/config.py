@@ -4,7 +4,6 @@ import os
 
 CONFIG_FILE = "config.json"
 
-CONFIG_PATH_VAR = "path"
 CONFIG_CARD_VAR = "card"
 CONFIG_POINT_VAR = "points"
 CONFIG_INDEX_VAR = "${index}"
@@ -45,14 +44,6 @@ class Config():
         
         conf = dict(DEFAULTCONFIG, **conf)
 
-        if conf.__contains__(CONFIG_PATH_VAR) and conf.__contains__(CONFIG_CARD_VAR):
-            path = conf[CONFIG_PATH_VAR].replace(CONFIG_INDEX_VAR, conf[CONFIG_CARD_VAR])
-            
-            if not os.path.isdir(path):
-                path = DEFAULTCONFIG[CONFIG_PATH_VAR].replace(CONFIG_INDEX_VAR, DEFAULTCONFIG[CONFIG_CARD_VAR])
-
-            conf[CONFIG_PATH_VAR] = path
-
         if len(conf[CONFIG_POINT_VAR]) < 2:
             conf[CONFIG_POINT_VAR] = DEFAULTCONFIG[CONFIG_POINT_VAR]
         
@@ -67,7 +58,7 @@ class Config():
     def save(self):
         try:
             with open(CONFIG_FILE, "w") as write_file:
-                json.dump(self.myConfig, write_file, sort_keys=True, indent=4)
+                json.dump(self.myConfig, write_file)
             print("Saved %s: %s" % (CONFIG_FILE, self.myConfig))
         except:
             print("Failed to save config!")
