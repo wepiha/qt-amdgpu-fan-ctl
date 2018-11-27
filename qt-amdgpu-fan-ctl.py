@@ -17,7 +17,6 @@ VIEW_MIN = -3
 QLABEL_STYLE_SHEET = "QLabel { color: white; background-color: %s; }"
 
 lastCardIndex = 0
-lastCtlValue = -1
 hwmon = hwmonInterface.HwMon()
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -33,7 +32,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonEnable.clicked.connect(self.buttonEnableClicked)
         self.ui.pushButtonSave.clicked.connect(self.buttonSaveClicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
-        self.ui.comboBoxPowerProfile.currentTextChanged.connect(self.comboBoxPowerProfile)
+        self.ui.comboBoxPowerProfile.currentTextChanged.connect(self.comboBoxPowerProfileChanged)
         self.timer.timeout.connect(self.timerTick)
         self.timer.start()
         self.spinBoxIntervalChanged(self.myConfig.getValue(CONFIG_INTERVAL_VAR))
@@ -115,13 +114,10 @@ class MainWindow(QtWidgets.QMainWindow):
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
     
-    def comboBoxPowerProfile(self, value):
+    def comboBoxPowerProfileChanged(self, value):
         for level in hwmonInterface.accepted_power_dpm_force_performance_level:
             if (str(value.lower()) == str(level)):
                 hwmon.power_dpm_force_performance_level = level
-
-        hwmon.pp_dpm_sclk = [0]
-        hwmon.pp_dpm_mclk = [0]
 
     def getSceneItem(self, name):
         for item in self.ui.graphicsView.plotItem.items:
