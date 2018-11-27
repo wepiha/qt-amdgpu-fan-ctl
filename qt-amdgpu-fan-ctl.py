@@ -9,7 +9,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 from common import hwmonInterface
 from common.fancurvegraph  import FanCurveGraph
-from common.config import *
+from common.config import (Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR)
 
 VIEW_LIMITER = 110
 VIEW_MIN = -3
@@ -32,7 +32,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonEnable.clicked.connect(self.buttonEnableClicked)
         self.ui.pushButtonSave.clicked.connect(self.buttonSaveClicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
-        self.ui.comboBoxPowerProfile.currentTextChanged.connect(self.comboBoxPowerProfileChanged)
+        self.ui.comboBoxPerfProfile.currentTextChanged.connect(self.comboBoxPerfProfileChanged)
         self.timer.timeout.connect(self.timerTick)
         self.timer.start()
         self.spinBoxIntervalChanged(self.myConfig.getValue(CONFIG_INTERVAL_VAR))
@@ -95,7 +95,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonRemove.clicked.connect(graph.removePoint)
 
         for level in hwmonInterface.accepted_power_dpm_force_performance_level:
-            self.ui.comboBoxPowerProfile.addItem(level.name.title())
+            self.ui.comboBoxPerfProfile.addItem(level.name.title())
 
   
     def closeEvent(self, *args, **kwargs):
@@ -114,7 +114,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
     
-    def comboBoxPowerProfileChanged(self, value):
+    def comboBoxPerfProfileChanged(self, value):
         for level in hwmonInterface.accepted_power_dpm_force_performance_level:
             if (str(value.lower()) == str(level)):
                 hwmon.power_dpm_force_performance_level = level
@@ -173,7 +173,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.labelMemClock.setText("%s MHz" % hwmon.pp_dpm_mclk_mhz)
         self.ui.labelCoreClock.setText("%s MHz" % hwmon.pp_dpm_sclk_mhz)
 
-        self.ui.comboBoxPowerProfile.setCurrentText(hwmon.power_dpm_force_performance_level.title())
+        self.ui.comboBoxPerfProfile.setCurrentText(hwmon.power_dpm_force_performance_level.title())
 
         self.ui.labelPowerProfile.setText(hwmon.pp_power_profile_mode_active.mode_name.title())
 
