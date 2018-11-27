@@ -168,7 +168,7 @@ class HwMon:
     def __getvalue(self, path):
         try:
             file = open(HWMON_SYSFS_PATH % (self._card, path), "r")
-            value = file.read()
+            value = file.read().strip()
         except Exception as e:
             raise e
             
