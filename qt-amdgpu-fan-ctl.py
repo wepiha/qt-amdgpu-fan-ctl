@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import sys, os
+os.environ['PYQTGRAPH_QT_LIB'] = 'PyQt5'
+
 import json
 import pyqtgraph as pg
 import ui.mainwindow as mainwindow
@@ -16,13 +18,13 @@ VIEW_MIN = -3
 
 QLABEL_STYLE_SHEET = "QLabel { color: white; background-color: %s; }"
 
-lastCardIndex = 0
 hwmon = hwmonInterface.HwMon()
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         self.myConfig = Config()
         self.timer = QtCore.QTimer()
+        self.lastFanValue = -1
 
         super(MainWindow, self).__init__()
         self.ui = mainwindow.Ui_MainWindow()
@@ -141,7 +143,9 @@ class MainWindow(QtWidgets.QMainWindow):
         g = 255 - r
         
         if (hwmonInterface.accepted_pwm1_enable(pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
-            hwmon.pwm1 = targetSpeed
+            if (self.lastFanValue != targetSpeed):
+                hwmon.pwm1 = targetSpeed
+                self.lastFanValue = targetSpeed
             color = "#ff5d00"
             button = "Disable"
             y = [(targetSpeed / 255) * 100]
