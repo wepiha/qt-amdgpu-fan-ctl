@@ -5,7 +5,7 @@ from enum import Enum
 # Source: https://www.kernel.org/doc/html/latest/gpu/amdgpu.html#hwmon-interfaces 
 #
 
-HWMON_SYSFS_PATH = "/sys/class/drm/card%s/%s"
+HWMON_SYSFS_DIR = "/sys/class/hwmon/"
 
 class accepted_pwm1_enable(Enum):
     def __str__(self):
@@ -33,14 +33,7 @@ class accepted_power_dpm_state(Enum):
     balanced = "balanced"
     performance = "performance"
 
-class sysfs_device_hwmon_hwmon0(Enum):
-    """
-    Enums that are related to sysfs interfaces found in
-    /sys/class/drm/cardN/device/hwmon/hwmon0/
-    """
-    def __str__(self):
-        return str("device/hwmon/hwmon0/%s" % self.name)
-    
+class sysfs_device_hwmon():
     pwm1 = "pwm1"
     pwm1_enable = "pwm1_enable"
     pwm1_min = "pwm1_min"
@@ -119,7 +112,6 @@ class pp_power_profile:
     def mclk_active_level(self):
         return self.__data["MCLK_ACTIVE_LEVEL"]
 
-
 class HwMon:
     """
     The amdgpu driver exposes the following sensor interfaces:
@@ -160,36 +152,43 @@ class HwMon:
         fan[1-*]_target: Desired fan speed Unit: revolution/min (RPM)
         fan[1-*]_enable: Enable or disable the sensors.1: Enable 0: Disable
     """
-    def __init__(self, card = 0):
-        self._card = card
+    def __init__(self, interface = 0):
+        self._interfaces = self.__getinterfaces()
+        self._interface = self._interfaces[interface]
     
+    def __getinterfaces(self):
+        dirs = [f.path + "/%s" for f in os.scandir(HWMON_SYSFS_DIR) if f.is_dir() ]
+        dirs.sort()
+        
+        return dirs
+
     def __setperms(self, path):
         os.system('python3 %s/common/setperms.py %s' % (os.getcwd(), path) )
 
     def __getvalue(self, path):
         try:
-            file = open(HWMON_SYSFS_PATH % (self._card, path), "r")
+            file = open(self._interface % path, "r")
             value = file.read().strip()
         except Exception as e:
             raise e
             
         return value
     
-    def __setvalue(self, interface, value):
-        path = HWMON_SYSFS_PATH % (self._card, interface)
+    def __setvalue(self, path, value):
+        path = self._interface % path
         try:
             self.__setperms(path)
 
             with open(path, "w") as file:
                 file.write(str(value))
         except Exception as e:
-            print("__setvalue(%s, %s) failed: %s" % (interface.name, value, e))
+            print("__setvalue(%s, %s)::failed: %s" % (path, value, e))
         else:
-            print("__setvalue(%s, %s) success" % (interface.name, value) )
+            print("__setvalue(%s, %s)::success" % (path, value) )
 
     @property
     def pwm1(self):
-        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.pwm1))
+        return int(self.__getvalue(sysfs_device_hwmon.pwm1))
     @pwm1.setter
     def pwm1(self, value):
         """
@@ -199,12 +198,12 @@ class HwMon:
             raise TypeError("value must be an integer")
         if ((value < 0) or (value > self.pwm1_max)):
             raise ArithmeticError("value is not within range")
-        self.__setvalue(sysfs_device_hwmon_hwmon0.pwm1, value)
+        self.__setvalue(sysfs_device_hwmon.pwm1, value)
 
 
     @property
     def pwm1_enable(self):
-        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.pwm1_enable))
+        return int(self.__getvalue(sysfs_device_hwmon.pwm1_enable))
 
     @pwm1_enable.setter
     def pwm1_enable(self, pwmstate = accepted_pwm1_enable.Auto):
@@ -214,7 +213,7 @@ class HwMon:
         if not isinstance(pwmstate, accepted_pwm1_enable):
             raise TypeError("pwmstate must be an instance of accepted_pwm1_enable Enum")
         
-        self.__setvalue(sysfs_device_hwmon_hwmon0.pwm1_enable, pwmstate.value)
+        self.__setvalue(sysfs_device_hwmon.pwm1_enable, pwmstate.value)
     
     @property
     def pwm1_min(self):
@@ -237,35 +236,35 @@ class HwMon:
         """
         the on die GPU temperature in millidegrees Celsius
         """
-        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.temp1_input))
+        return int(self.__getvalue(sysfs_device_hwmon.temp1_input))
 
     @property
     def temp1_crit(self):
         """
         temperature critical max value in millidegrees Celsius
         """
-        return int(int(self.__getvalue(sysfs_device_hwmon_hwmon0.temp1_crit)))
+        return int(int(self.__getvalue(sysfs_device_hwmon.temp1_crit)))
 
     @property
     def fan1_input(self):
         """
         fan speed in RPM
         """
-        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.fan1_input))
+        return int(self.__getvalue(sysfs_device_hwmon.fan1_input))
 
     @property
     def power1_average(self):
         """
         average power used by the GPU in microWatts
         """
-        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.power1_average))
+        return int(self.__getvalue(sysfs_device_hwmon.power1_average))
 
     @property
     def in0_input(self):
         """
         the voltage on the GPU in millivolts
         """
-        return int(self.__getvalue(sysfs_device_hwmon_hwmon0.in0_input))
+        return int(self.__getvalue(sysfs_device_hwmon.in0_input))
 
     @property
     def pp_dpm_mclk(self):
