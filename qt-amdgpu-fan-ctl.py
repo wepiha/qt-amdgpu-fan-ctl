@@ -23,7 +23,9 @@ hwmon = hwmonInterface.HwMon()
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
         self.myConfig = Config()
-        self.timer = QtCore.QTimer()
+        self.timerUI = QtCore.QTimer()
+        self.timerCtl = QtCore.QTimer() 
+
         self.lastFanValue = -1
 
         super(MainWindow, self).__init__()
@@ -35,8 +37,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.pushButtonSave.clicked.connect(self.buttonSaveClicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
         self.ui.comboBoxPerfProfile.currentTextChanged.connect(self.comboBoxPerfProfileChanged)
-        self.timer.timeout.connect(self.timerTick)
-        self.timer.start()
+        self.timerUI.timeout.connect(self.timerUpdateTick)
+        self.timerCtl.timeout.connect(self.timerCtlTick)
+        self.timerUI.start()
+        self.timerCtl.start(250)
+
         self.spinBoxIntervalChanged(self.myConfig.getValue(CONFIG_INTERVAL_VAR))
 
         pg.setConfigOptions(antialias=True)
@@ -99,6 +104,8 @@ class MainWindow(QtWidgets.QMainWindow):
         for level in hwmonInterface.accepted_power_dpm_force_performance_level:
             self.ui.comboBoxPerfProfile.addItem(level.name.title())
 
+        self.lastUpdate = hwmon.temp1_input
+        self.hysteresis = self.lastUpdate / 1000
   
     def closeEvent(self, *args, **kwargs):
         if (hwmonInterface.accepted_pwm1_enable(hwmon.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
@@ -111,7 +118,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def spinBoxIntervalChanged(self, value):
         self.myConfig.setValue(CONFIG_INTERVAL_VAR, value)
-        self.timer.setInterval(int(value))
+        self.timerUI.setInterval(int(value))
 
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
@@ -128,11 +135,12 @@ class MainWindow(QtWidgets.QMainWindow):
         
         raise LookupError("The item '%s' was not found" % name)
     
-    def timerTick(self):
+    def timerUpdateTick(self):
         self.myConfig.setValue(CONFIG_POINT_VAR, self.getSceneItem('graph').pos.tolist())
 
         pwm1_max = hwmon.pwm1_max
-        temp1_input = hwmon.temp1_input / 1000
+        #temp1_input = hwmon.temp1_input / 1000
+        temp1_input = self.hysteresis
         temp1_crit = hwmon.temp1_crit / 1000
         pwm1_enable = hwmon.pwm1_enable
 
@@ -180,6 +188,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.comboBoxPerfProfile.setCurrentText(hwmon.power_dpm_force_performance_level.title())
 
         self.ui.labelPowerProfile.setText(hwmon.pp_power_profile_mode_active.mode_name.title())
+
+    def timerCtlTick(self):
+        self.hysteresis = (hwmon.temp1_input + self.lastUpdate) / 2000
+        self.lastUpdate = hwmon.temp1_input
+        
 
 app = QtWidgets.QApplication(sys.argv)
 
