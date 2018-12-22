@@ -139,8 +139,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.myConfig.setValue(CONFIG_POINT_VAR, self.getSceneItem('graph').pos.tolist())
 
         pwm1_max = hwmon.pwm1_max
-        #temp1_input = hwmon.temp1_input / 1000
-        temp1_input = self.hysteresis
+        temp1_input = hwmon.temp1_input / 1000
+        #temp1_input = self.hysteresis
         temp1_crit = hwmon.temp1_crit / 1000
         pwm1_enable = hwmon.pwm1_enable
 
