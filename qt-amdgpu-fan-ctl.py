@@ -108,6 +108,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hysteresis = self.lastUpdate / 1000
   
     def closeEvent(self, *args, **kwargs):
+        # mainwindow is closing, reset the pwm1_enable to Auto if we have Manually set the value
         if (hwmonInterface.accepted_pwm1_enable(hwmon.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
             hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Auto
 
@@ -136,17 +137,21 @@ class MainWindow(QtWidgets.QMainWindow):
         raise LookupError("The item '%s' was not found" % name)
     
     def timerUpdateTick(self):
+        # store the current point list
         self.myConfig.setValue(CONFIG_POINT_VAR, self.getSceneItem('graph').pos.tolist())
 
+        # acquire hardware values
         pwm1_max = hwmon.pwm1_max
         temp1_input = hwmon.temp1_input / 1000
         #temp1_input = self.hysteresis
         temp1_crit = hwmon.temp1_crit / 1000
         pwm1_enable = hwmon.pwm1_enable
 
+        # calculate speed using trig
         targetSpeed = int((self.getSceneItem('graph').getIntersection(x=temp1_input) / 100) * pwm1_max)
         fanSpeed = int((hwmon.pwm1 / pwm1_max) * 100)
         
+        # calculate red (higher or hotter) vs green (cooler or normal) balance 
         r = int((temp1_input / temp1_crit) * 255)
         g = 255 - r
         
