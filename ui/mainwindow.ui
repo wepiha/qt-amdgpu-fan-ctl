@@ -71,7 +71,7 @@
        <bool>false</bool>
       </property>
       <property name="styleSheet">
-       <string notr="true">QWidget { background: black }</string>
+       <string notr="true"/>
       </property>
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">

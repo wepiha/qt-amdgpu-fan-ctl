@@ -46,7 +46,7 @@ class Ui_MainWindow(object):
         self.gridLayout_3.addLayout(self.horizontalLayout, 1, 0, 1, 2)
         self.widget = QtWidgets.QWidget(self.centralwidget)
         self.widget.setAutoFillBackground(False)
-        self.widget.setStyleSheet("QWidget { background: black }")
+        self.widget.setStyleSheet("")
         self.widget.setObjectName("widget")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.widget)
         self.gridLayout_2.setObjectName("gridLayout_2")
