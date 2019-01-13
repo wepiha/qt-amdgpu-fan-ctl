@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>613</width>
-    <height>472</height>
+    <width>573</width>
+    <height>382</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,7 +18,7 @@
     <normaloff>media/amd.svg</normaloff>media/amd.svg</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout_3">
+   <layout class="QGridLayout" name="gridLayout_4">
     <item row="0" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout_3">
       <item>
@@ -340,7 +340,19 @@
      </widget>
     </item>
     <item row="2" column="1">
-     <widget class="PlotWidget" name="graphicsView"/>
+     <widget class="QFrame" name="frame">
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Raised</enum>
+      </property>
+      <layout class="QGridLayout" name="gridLayout_3">
+       <item row="0" column="0">
+        <widget class="PlotWidget" name="graphicsView"/>
+       </item>
+      </layout>
+     </widget>
     </item>
     <item row="3" column="0" colspan="2">
      <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -461,28 +473,6 @@
        </widget>
       </item>
      </layout>
-    </item>
-    <item row="5" column="0" colspan="2">
-     <widget class="QPlainTextEdit" name="plainTextEdit">
-      <property name="enabled">
-       <bool>true</bool>
-      </property>
-      <property name="maximumSize">
-       <size>
-        <width>16777215</width>
-        <height>85</height>
-       </size>
-      </property>
-      <property name="lineWrapMode">
-       <enum>QPlainTextEdit::WidgetWidth</enum>
-      </property>
-      <property name="readOnly">
-       <bool>true</bool>
-      </property>
-      <property name="plainText">
-       <string>WARNING: THIS SOFTWARE DOES NOT INCLUDE A WARRANTY OF ANY KIND. ENABLE MANUAL FAN CONTROL AT YOUR OWN RISK. Also note that many devices will limit the lowest possible fan speed and may not allow for control below that threshold. </string>
-      </property>
-     </widget>
     </item>
    </layout>
   </widget>
