@@ -47,18 +47,19 @@ class Config():
         if len(conf[CONFIG_POINT_VAR]) < 2:
             conf[CONFIG_POINT_VAR] = DEFAULTCONFIG[CONFIG_POINT_VAR]
         
-        with open(CONFIG_FILE, "w") as write_file:
-            json.dump(conf, write_file)
-        
         conf[CONFIG_POINT_VAR] = sorted(conf[CONFIG_POINT_VAR], key=lambda tup: tup[1])
 
         print("Loaded %s: %s" % (CONFIG_FILE, conf))
         self.myConfig = conf
 
-    def save(self):
+        self.save(False)
+
+    def save(self, notice = True):
         try:
             with open(CONFIG_FILE, "w") as write_file:
-                json.dump(self.myConfig, write_file)
-            print("Saved %s: %s" % (CONFIG_FILE, self.myConfig))
-        except:
-            print("Failed to save config!")
+                json.dump(self.myConfig, write_file, indent=4, sort_keys=True)
+            if (notice):
+                print("Saved %s: %s" % (CONFIG_FILE, self.myConfig))
+        except Exception as e:
+            if (notice):
+                print("Failed to save config!\nError Message: %s" % e )
