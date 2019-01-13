@@ -11,6 +11,8 @@ class FanCurveGraph(pg.GraphItem):
     MIN_POINT_DISTANCE = 16
 
     def __init__(self, parent, data, name, staticPos=None):
+        pg.GraphItem.__init__(self)
+
         self.dragPoint = None
         self.dragOffset = None
         self.plotWidget = parent
@@ -18,7 +20,6 @@ class FanCurveGraph(pg.GraphItem):
         
         self.staticPos = staticPos
 
-        pg.GraphItem.__init__(self)
         self.setData(pos=np.stack(data))
 
     def setData(self, **kwds):
@@ -189,8 +190,10 @@ class FanCurveGraph(pg.GraphItem):
         if p[1] < minY: p[1] = minY
         if p[1] > maxY: p[1] = maxY
 
-        self.setCoordValues(p[0] - 8, p[1] + 8 )
-        self.setCoordText("(%d, %d)" % (p[0], p[1]))
+        ps = self.plotWidget.getViewBox().viewPixelSize()
 
+        self.setCoordValues(p[0] - (ps[0] * 24), p[1] + (ps[1] * 24) )
+        self.setCoordText("(%d, %d)" % (p[0], p[1]))
+        
         self.updateGraph()
         event.accept()
