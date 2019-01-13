@@ -165,12 +165,6 @@ class MainWindow(QtWidgets.QMainWindow):
         for level in hwmonInterface.accepted_power_dpm_force_performance_level:
             self.ui.comboBoxPerfProfile.addItem(level.name.title())
 
-    def _mainwindow_close_event(self, *args, **kwargs):
-        """ Handles `mainwindow` is close event"""
-        # mainwindow is closing, reset the pwm1_enable to Auto if we have Manually set the value
-        if (hwmonInterface.accepted_pwm1_enable(hwmon.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
-            hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Auto
-
     def _button_enable_clicked(self, value):
         """ Changes the control state """
         self.lastEnabled = value
@@ -284,6 +278,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.hysteresis = (hwmon.temp1_input + self.lastUpdate) / 2000
         self.lastUpdate = hwmon.temp1_input
         
+    def closeEvent(self, *args, **kwargs):
+        """ Handles `mainwindow` is close event"""
+        # mainwindow is closing, reset the pwm1_enable to Auto if we have Manually set the value
+        if (hwmonInterface.accepted_pwm1_enable(hwmon.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
+            hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Auto
 
 app = QtWidgets.QApplication(sys.argv)
 
