@@ -1,11 +1,11 @@
-
 # -*- coding: utf-8 -*-
+
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 import pyqtgraph as pg
 import numpy as np
 import math
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 class FanCurveGraph(pg.GraphItem):
     MIN_POINT_DISTANCE = 16
@@ -114,9 +114,35 @@ class FanCurveGraph(pg.GraphItem):
             math.pow( self.data['pos'][p2][1] - self.data['pos'][p1][1], 2 )
         )
 
+    def getCoordWidget(self):
+        coordWidget = None
+
+        for item in self.plotWidget.plotItem.items:
+            if (isinstance(item, pg.graphicsItems.TextItem.TextItem)):
+                coordWidget = item
+                break
+
+        return coordWidget
+
+    def setCoordText(self, text = ""):
+        coordWidget = self.getCoordWidget()
+
+        if (coordWidget is None):
+            return
+
+        coordWidget.setText(text)
+
+    def setCoordValues(self, x, y):
+        coordWidget = self.getCoordWidget()
+
+        if (coordWidget is None):
+            return
+
+        coordWidget.setPos(x, y)
+
     def mouseDragEvent(self, event):
-        textWidget = self.plotWidget.plotItem.items[3] #FIXME: If possible, refer without using fixed-value indicies
-        textWidget.setText("")
+        
+        self.setCoordText()
 
         if event.button() != QtCore.Qt.LeftButton:
             event.ignore()
@@ -163,8 +189,8 @@ class FanCurveGraph(pg.GraphItem):
         if p[1] < minY: p[1] = minY
         if p[1] > maxY: p[1] = maxY
 
-        textWidget.setPos(p[0] - 8, p[1] + 8 )
-        textWidget.setText("(%d, %d)" % (p[0], p[1]))
+        self.setCoordValues(p[0] - 8, p[1] + 8 )
+        self.setCoordText("(%d, %d)" % (p[0], p[1]))
 
         self.updateGraph()
         event.accept()
