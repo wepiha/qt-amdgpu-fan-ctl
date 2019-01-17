@@ -191,15 +191,19 @@ class Ui_MainWindow(object):
         self.gridLayout.setObjectName("gridLayout")
         self.pushButtonClose = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonClose.setObjectName("pushButtonClose")
-        self.gridLayout.addWidget(self.pushButtonClose, 0, 2, 1, 1)
+        self.gridLayout.addWidget(self.pushButtonClose, 0, 4, 1, 1)
         self.pushButtonSave = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonSave.setObjectName("pushButtonSave")
-        self.gridLayout.addWidget(self.pushButtonSave, 0, 1, 1, 1)
+        self.gridLayout.addWidget(self.pushButtonSave, 0, 2, 1, 1)
         self.pushButtonEnable = QtWidgets.QPushButton(self.centralwidget)
         self.pushButtonEnable.setCheckable(True)
         self.pushButtonEnable.setChecked(False)
         self.pushButtonEnable.setObjectName("pushButtonEnable")
         self.gridLayout.addWidget(self.pushButtonEnable, 0, 0, 1, 1)
+        self.pushButtonMonitor = QtWidgets.QPushButton(self.centralwidget)
+        self.pushButtonMonitor.setCheckable(True)
+        self.pushButtonMonitor.setObjectName("pushButtonMonitor")
+        self.gridLayout.addWidget(self.pushButtonMonitor, 0, 1, 1, 1)
         self.gridLayout_4.addLayout(self.gridLayout, 4, 0, 1, 2)
         MainWindow.setCentralWidget(self.centralwidget)
 
@@ -236,5 +240,6 @@ class Ui_MainWindow(object):
         self.pushButtonClose.setText(_translate("MainWindow", "Close"))
         self.pushButtonSave.setText(_translate("MainWindow", "Save"))
         self.pushButtonEnable.setText(_translate("MainWindow", "Enable"))
+        self.pushButtonMonitor.setText(_translate("MainWindow", "Monitor"))
 
 from pyqtgraph import PlotWidget
