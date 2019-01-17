@@ -6,16 +6,14 @@ os.environ['PYQTGRAPH_QT_LIB'] = 'PyQt5'
 import json
 import pyqtgraph as pg
 import ui.mainwindow as mainwindow
- 
+from ui.monitorwindow import MonitorWindow
+
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPalette
 
-from common import hwmonInterface
-from common.fancurvegraph  import FanCurveGraph
-from common.config import (Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR)
-
-VIEW_LIMITER = 110
-VIEW_MIN = -3
+from common.hwmonInterface import HwMon, accepted_pwm1_enable, sysfs_device_hwmon, sysfm_device_hwmon_monitors, accepted_power_dpm_force_performance_level
+from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item
+from common.config import Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR
 
 UI_QLABEL_BG_CSS = "QLabel { color: white; background-color: %s; }"
 UI_DARK_ROUND_CSS = "QWidget { background-color: %s; border-style: solid; border-color: %s; border-width: 2px; border-radius: 3px; }"
@@ -34,21 +32,25 @@ class MainWindow(QtWidgets.QMainWindow):
         self._init_pyqtsignals()
         self._init_drivervalues()
         self._init_styles()
+        self._init_monitor_ui()
 
         # start working now
         self._timer_update_tick()
+        self._refresh_monitor_ui(True)
 
     def _init_globals(self):
         """ Initializes `global` variables """
         pg.setConfigOptions(antialias=True)
 
-        self.hwmon = hwmonInterface.HwMon()
+        self.hwmon = HwMon()
         self.config = Config()
         
         self.lastUpdate = self.hwmon.temp1_input
         self.lastEnabled = False
         self.lastFanValue = -1
         self.hysteresis = self.lastUpdate / 1000
+
+        self.monitoring = False
 
     def _init_timers(self):
         """ Initializes timers and starts them """
@@ -57,21 +59,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timerUI.start()
 
         self.timerCtl = QtCore.QTimer() 
-        self.timerCtl.timeout.connect(self.timer_ctrl_tick)
+        self.timerCtl.timeout.connect(self._timer_ctrl_tick)
         self.timerCtl.start(250)
 
     def _init_pyqtsignals(self):
         """ Connects pyqt5 signals to various slots """
         self.ui.spinBoxInterval.valueChanged.connect(self._spin_interval_changed)
-        self.ui.pushButtonEnable.clicked.connect(self._button_enable_clicked)
+        self.ui.pushButtonEnable.clicked.connect(self._button_enable_toggled)
         self.ui.pushButtonSave.clicked.connect(self._button_save_clicked)
         self.ui.pushButtonClose.clicked.connect(self.close)
         self.ui.comboBoxPerfProfile.currentTextChanged.connect(self._combo_perf_profile_changed)
+        self.ui.pushButtonMonitor.clicked.connect(self._button_monitor_toggled)
 
         self._spin_interval_changed(self.config.getValue(CONFIG_INTERVAL_VAR))
 
-        self.ui.pushButtonAdd.clicked.connect(self._get_plotwidget_item(GRAPHITEM_NAME).addPoint)
-        self.ui.pushButtonRemove.clicked.connect(self._get_plotwidget_item(GRAPHITEM_NAME).removePoint)
+        self.ui.pushButtonAdd.clicked.connect(get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).addPoint)
+        self.ui.pushButtonRemove.clicked.connect(get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).removePoint)
+
+        self.closeEvent = self._mainwindow_closeevent
 
     def _init_graphview(self):
         """ Initializes the graph widgets """
@@ -84,36 +89,27 @@ class MainWindow(QtWidgets.QMainWindow):
         """ 
         Initializes the `PlotWidget`:
 
-        - Adds a `FanCurveGraph` which allows for point manipulation
+        - Adds a `EditableGraph` which allows for point manipulation
         - Adds xy labels for Fan Speed and Temperature
         - Sets and locks the viewport, disables the right-click menu
         - Shows the Grid, and sets the Tick Spacing
         """
-        self.ui.graphicsView.setLabels(left=('Fan Speed', '%'), bottom=("Temperature", '°C'))
-        self.ui.graphicsView.setMenuEnabled(False)
-        self.ui.graphicsView.setAspectLocked(True)
-        self.ui.graphicsView.hideButtons()
-        self.ui.graphicsView.showGrid(x=True, y=True, alpha=0.1)
-        self.ui.graphicsView.getAxis('bottom').setTickSpacing(10, 1)
-        self.ui.graphicsView.getAxis('left').setTickSpacing(10, 5)
-        self.ui.graphicsView.setLimits(
-            xMin = VIEW_MIN,
-            yMin = VIEW_MIN,
-            xMax = VIEW_LIMITER + VIEW_MIN,
-            yMax = VIEW_LIMITER + VIEW_MIN,
-            minXRange = VIEW_LIMITER,
-            maxXRange = VIEW_LIMITER,
-            minYRange = VIEW_LIMITER,
-            maxYRange = VIEW_LIMITER
+        InitPlotWidget(
+            self.ui.graphicsView, 
+            labels={'left': ('Fan Speed', '%'), 'bottom': ("Temperature", '°C')},
+            showGrid={'x': True, 'y': True, 'alpha': 0.1},
+            tickSpacing={'left': (10, 5), 'bottom': (10, 1)},
+            limits=(-3, 110)
         )
+        
         # FIXME the labels appear too close to the boundary and require additional padding 
 
-        data = self.config.getValue(CONFIG_POINT_VAR)
-        tcrit = [self.hwmon.temp1_crit / 1000, 100]
-
-        graph = FanCurveGraph(self.ui.graphicsView, data=data, name=GRAPHITEM_NAME, staticPos=tcrit)
-
-        self.ui.graphicsView.addItem(graph)
+        EditableGraph(
+            self.ui.graphicsView,
+            data=self.config.getValue(CONFIG_POINT_VAR),
+            name=GRAPHITEM_NAME,
+            staticPos=[self.hwmon.temp1_crit / 1000, 100]
+        )
        
     def _init_graph_lines(self):
         """ 
@@ -159,24 +155,46 @@ class MainWindow(QtWidgets.QMainWindow):
         """ Sets the UI styles for plot and display widgets"""
         darkbg = self.ui.centralwidget.palette().color(QPalette.Dark).name()
 
-        self.ui.graphicsView.setBackground(None)
         #self.ui.graphicsView.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
         self.ui.frame.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
         self.ui.widget.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg) )
 
     def _init_drivervalues(self):
         """ Adds various data pieces to the `mainwindow` widgets """
-        for level in hwmonInterface.accepted_power_dpm_force_performance_level:
+        for level in accepted_power_dpm_force_performance_level:
             self.ui.comboBoxPerfProfile.addItem(level.name.title())
 
-    def _button_enable_clicked(self, value):
+    def _monitor_closed(self, evt):
+        """ Handle close event for monitor window """
+        # restore monitor window checked state
+        self.ui.pushButtonMonitor.setChecked(False)
+        self.monitoring = False
+
+    def _init_monitor_ui(self):
+        self.monwindow = MonitorWindow(self.hwmon)
+        self.monwindow.closeEvent = self._monitor_closed
+        self._refresh_monitor_ui(True)
+
+    def _button_monitor_toggled(self, value):
+        if (value):
+            self.monwindow.move(self.pos().x() + self.frameGeometry().width(), self.pos().y())
+            self.monwindow.show()
+            self.activateWindow()
+        else:
+            self.monwindow.hide()
+
+        self.monitoring = value
+
+    def _button_enable_toggled(self, value):
         """ Changes the control state """
         self.lastEnabled = value
-        self.hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Manual if value else hwmonInterface.accepted_pwm1_enable.Auto
+        self.hwmon.pwm1_enable = accepted_pwm1_enable.Manual if value else accepted_pwm1_enable.Auto
 
     def _button_save_clicked(self):
         """ Saves and applies the fan curve """
-        self.config.setValue(CONFIG_POINT_VAR, self._get_plotwidget_item(GRAPHITEM_NAME).pos.tolist())
+        data = get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).pos.tolist()
+
+        self.config.setValue(CONFIG_POINT_VAR, data)
         self.config.save()
 
     def _spin_interval_changed(self, value):
@@ -189,60 +207,54 @@ class MainWindow(QtWidgets.QMainWindow):
     
     def _combo_perf_profile_changed(self, value):
         """ Set the `power_dpm_force_performance_level` when the user changes the value """
-        for level in hwmonInterface.accepted_power_dpm_force_performance_level:
+        for level in accepted_power_dpm_force_performance_level:
             if (str(value.lower()) == str(level)):
                 self.hwmon.power_dpm_force_performance_level = level
-
-    def _get_plotwidget_item(self, name):
-        """ Helper function to acquire items added to the `PlotWidget` """
-        for item in self.ui.graphicsView.plotItem.items:
-            if (hasattr(item, '_name')) and (item._name == name):
-                return item
-        
-        raise LookupError("The item '%s' was not found" % name)
-    
+                
     def _timer_update_tick(self):
         """ Event occurs on timertick from the Update Interval on the `mainwindow` """
         self._get_hwmon_values()
-        self._refresh_ui()
+        self._refresh_main_ui()
+        self._refresh_monitor_ui()
         self._set_hwmon_values()
 
     def _get_hwmon_values(self):
         """ Retrieves values from `hwmon` interface and stores them in global variables """
         # acquire hardware values
         self.pwm1_max = self.hwmon.pwm1_max
-        self.temp1_input = self.hwmon.temp1_input / 1000
-        #temp1_input = self.hysteresis
-        self.temp1_crit = self.hwmon.temp1_crit / 1000
+        self.temp1_input = self.hwmon.temp1_input_degrees
+        
+        self.temp1_crit = self.hwmon.temp1_crit_degrees
         self.pwm1_enable = self.hwmon.pwm1_enable
         
-        # calculate speed using trig
-        self.targetSpeed = int((self._get_plotwidget_item(GRAPHITEM_NAME).getIntersection(x=self.temp1_input) / 100) * self.pwm1_max)
+        intesect = get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).getIntersection(x=self.temp1_input)
+
+        self.targetSpeed = int((intesect / 100) * self.pwm1_max)
         self.fanSpeed = int((self.hwmon.pwm1 / self.pwm1_max) * 100)
 
-    def is_manual_state_enabled(self):
-        """ checks if the manual state is actually enabled in hardware """
+    def is_hwmon_ctrl_state_manual(self):
+        """ checks if the manual state is set in hardware """
         # compare the local value against it's corresponding enum
-        return ( hwmonInterface.accepted_pwm1_enable(self.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual )
+        return ( self.pwm1_enable == accepted_pwm1_enable.Manual.value )
 
     def _set_hwmon_values(self):
         """ Sends values to the `hwmon` interface """
-        if ( self.is_manual_state_enabled() ):
+        if ( self.is_hwmon_ctrl_state_manual() ):
             if ( self.lastFanValue != self.targetSpeed ):
                 self.hwmon.pwm1 = self.targetSpeed
                 self.lastFanValue = self.targetSpeed
         else:
             if ( self.lastEnabled ):
                 # restore the state we set last
-                self.hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Manual
+                self.hwmon.pwm1_enable = accepted_pwm1_enable.Manual
 
-    def _refresh_ui(self):
+    def _refresh_main_ui(self):
         """ Refresh the user interface with data aquired from the `hwmon` interface """
         # calculate red (higher or hotter) vs green (cooler or normal) balance 
         r = int((self.temp1_input / self.temp1_crit) * 255)
         g = 255 - r
         
-        if ( self.is_manual_state_enabled() ):
+        if ( self.is_hwmon_ctrl_state_manual() ):
             color = "#ff5d00"
             button = "Disable"
             y = [(self.targetSpeed / 255) * 100]
@@ -251,42 +263,51 @@ class MainWindow(QtWidgets.QMainWindow):
             button = "Enable"
             y = [self.fanSpeed]
 
-        self._get_plotwidget_item('fTarget').setPen(color)
-        self._get_plotwidget_item('fTarget').setData(self.temp1_input, y)
+        get_plotwidget_item(self.ui.graphicsView, 'fTarget').setPen(color)
+        get_plotwidget_item(self.ui.graphicsView, 'fTarget').setData(self.temp1_input, y)
 
-        self._get_plotwidget_item('currTemp').setValue(self.temp1_input)
-        self._get_plotwidget_item('currFan').setValue(self.fanSpeed)
+        get_plotwidget_item(self.ui.graphicsView, 'currTemp').setValue(self.temp1_input)
+        get_plotwidget_item(self.ui.graphicsView, 'currFan').setValue(self.fanSpeed)
+
+        self.ui.pushButtonEnable.setText(button)
+        self.ui.pushButtonEnable.setChecked(self.is_hwmon_ctrl_state_manual())
 
         self.ui.labelTemperature.setText("%s °C" % self.temp1_input)
         self.ui.labelTemperature.setStyleSheet(UI_QLABEL_BG_CSS % '#{:02x}{:02x}{:02x}'.format(r, g, 0))
 
         self.ui.labelFanSpeed.setText("%s RPM" % self.hwmon.fan1_input)
 
-        self.ui.labelFanProfileStatus.setText("%s" % hwmonInterface.accepted_pwm1_enable(self.pwm1_enable))
+        self.ui.labelFanProfileStatus.setText("%s" % accepted_pwm1_enable(self.pwm1_enable))
         self.ui.labelFanProfileStatus.setStyleSheet(UI_QLABEL_BG_CSS % color)
 
-        self.ui.pushButtonEnable.setText(button)
-        self.ui.pushButtonEnable.setChecked(self.is_manual_state_enabled())
-
-        self.ui.labelPower.setText("%.1f W" % (self.hwmon.power1_average / 1000000))
+        self.ui.labelPower.setText("%.1f W" % (self.hwmon.power1_average_watts))
         self.ui.labelVoltage.setText("%d mV" % self.hwmon.in0_input)
 
         self.ui.labelMemClock.setText("%s MHz" % self.hwmon.pp_dpm_mclk_mhz)
         self.ui.labelCoreClock.setText("%s MHz" % self.hwmon.pp_dpm_sclk_mhz)
 
         self.ui.comboBoxPerfProfile.setCurrentText(self.hwmon.power_dpm_force_performance_level.title())
-
         self.ui.labelPowerProfile.setText(self.hwmon.pp_power_profile_mode_active.mode_name.title())
+    
+    def _refresh_monitor_ui(self, force=False):
+        if ((not self.monitoring) and (not force)):
+            return
+        
+        self.hwmon.update_ext_attributes()
 
-    def timer_ctrl_tick(self):
+        for attr in sysfm_device_hwmon_monitors:
+            if hasattr(self.hwmon, attr.value['attribute']):
+                self.monwindow.append_monitor_data(attr.value)
+
+    def _timer_ctrl_tick(self):
         self.hysteresis = (self.hwmon.temp1_input + self.lastUpdate) / 2000
         self.lastUpdate = self.hwmon.temp1_input
         
-    def closeEvent(self, *args, **kwargs):
-        """ Handles `mainwindow` is close event"""
+    def _mainwindow_closeevent(self, *args, **kwargs):
+        """ Handles `mainwindow` closeEvent"""
         # mainwindow is closing, reset the pwm1_enable to Auto if we have Manually set the value
-        if (hwmonInterface.accepted_pwm1_enable(self.hwmon.pwm1_enable) == hwmonInterface.accepted_pwm1_enable.Manual):
-            self.hwmon.pwm1_enable = hwmonInterface.accepted_pwm1_enable.Auto
+        if (accepted_pwm1_enable(self.hwmon.pwm1_enable) == accepted_pwm1_enable.Manual):
+            self.hwmon.pwm1_enable = accepted_pwm1_enable.Auto
 
 app = QtWidgets.QApplication(sys.argv)
 
