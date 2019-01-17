@@ -8,6 +8,13 @@ from enum import Enum
 HWMON_SYSFS_DIR = "/sys/class/hwmon/"
 
 class accepted_pwm1_enable(Enum):
+    """
+    Enum class for control state
+
+    Disabled = 0
+    Manual = 1
+    Auto = 2
+    """
     def __str__(self):
         return str(self.name)
     Disabled = 0
@@ -15,6 +22,17 @@ class accepted_pwm1_enable(Enum):
     Auto = 2
 
 class accepted_power_dpm_force_performance_level(Enum):
+    """Enum class for forced performance level
+
+    auto = "auto"
+    low = "low"
+    high = "high"
+    manual = "manual"
+    profile_standard = "profile_standard"
+    profile_min_sclk = "profile_min_sclk"
+    profile_min_mclk = "profile_min_mclk"
+    profile_peak = "profile_peak"
+    """
     def __str__(self):
         return str(self.name)
     auto = "auto"
@@ -27,13 +45,26 @@ class accepted_power_dpm_force_performance_level(Enum):
     profile_peak = "profile_peak"
 
 class accepted_power_dpm_state(Enum):
+    """
+    Enum class for acceptable power dpm states
+
+
+    battery = "battery"
+    balanced = "balanced"
+    performance = "performance"
+    """
     def __str__(self):
         return str(self.name)
     battery = "battery"
     balanced = "balanced"
     performance = "performance"
 
-class sysfs_device_hwmon():
+class sysfs_device_hwmon(Enum):
+    """
+    Enum class of sysfs device capabilities
+    """
+    def __str__(self):
+        return str(self.name)
     pwm1 = "pwm1"
     pwm1_enable = "pwm1_enable"
     pwm1_min = "pwm1_min"
@@ -45,6 +76,33 @@ class sysfs_device_hwmon():
     power1_average = "power1_average"
     in0_input = "in0_input"
 
+class sysfm_device_hwmon_monitors(Enum):
+    temp1_input = {
+        'attribute': 'temp1_input_degrees',
+        'descriptor': 'Temperature',
+        'unit': '°C'
+    }
+    fan1_input = {
+        'attribute': 'fan1_input',
+        'descriptor': 'Fan Speed',
+        'unit': 'RPM'
+    }
+    pp_dpm_mclk_mhz = { 
+        'attribute': 'pp_dpm_mclk_mhz',
+        'descriptor': 'Memory Clock',
+        'unit': 'MHz'
+    }
+    pp_dpm_sclk_mhz = { 
+        'attribute': 'pp_dpm_sclk_mhz',
+        'descriptor': 'Core Clock',
+        'unit': 'MHz'
+    }
+    power1_average = {
+        'attribute': 'power1_average_watts',
+        'descriptor': 'Power Average',
+        'unit': 'W'
+    }
+
 class sysfs_device(Enum):
     """
     Enums that are related to sysfs interfaces found in
@@ -53,8 +111,8 @@ class sysfs_device(Enum):
     def __str__(self):
         return str("device/%s" % self.name)
 
-    #current_link_width = "current_link_width"
-    #current_link_speed = "current_link_speed"
+    current_link_width = "current_link_width"
+    current_link_speed = "current_link_speed"
     pp_dpm_mclk = "pp_dpm_mclk"
     pp_dpm_pcie = "pp_dpm_pcie"
     pp_dpm_sclk =  "pp_dpm_sclk"
@@ -155,7 +213,9 @@ class HwMon:
     def __init__(self, interface = 0):
         self._interfaces = self.__getinterfaces()
         self._interface = self._interfaces[interface]
-    
+
+        self.update_ext_attributes()
+
     def __getinterfaces(self):
         dirs = [f.path + "/%s" for f in os.scandir(HWMON_SYSFS_DIR) if f.is_dir() ]
         dirs.sort()
@@ -186,6 +246,25 @@ class HwMon:
         else:
             print("__setvalue(%s, %s)::success" % (path, value) )
 
+    def update_ext_attributes(self):
+        """
+        adds or updates extended min and max attributes, for those 
+        devices in `sysfm_device_hwmon_monitors`
+        """
+        for monitor in sysfm_device_hwmon_monitors:
+            base_attr = monitor.value['attribute']
+            new_value = getattr(self, base_attr)
+
+            for ext_attr in ['min', 'max']:
+                full_attr = f'{base_attr}_{ext_attr}'
+                
+                curr_value = getattr(self, full_attr, new_value)
+
+                if ((ext_attr == 'min') and (new_value < curr_value)) or ((ext_attr == 'max') and (new_value > curr_value)):
+                    curr_value = new_value
+
+                setattr(self, full_attr, curr_value)
+        
     @property
     def pwm1(self):
         return int(self.__getvalue(sysfs_device_hwmon.pwm1))
@@ -199,7 +278,6 @@ class HwMon:
         if ((value < 0) or (value > self.pwm1_max)):
             raise ArithmeticError("value is not within range")
         self.__setvalue(sysfs_device_hwmon.pwm1, value)
-
 
     @property
     def pwm1_enable(self):
@@ -220,16 +298,16 @@ class HwMon:
         """
         pulse width modulation fan control minimum level (0)
         """
-        return 0
-        #return self.__getvalue(Interface.pwm1_min)
+        #return 0
+        return int(self.__getvalue(sysfs_device_hwmon.pwm1_min))
 
     @property
     def pwm1_max(self):
         """
         pulse width modulation fan control maximum level (255)
         """
-        return 255
-        #return self.__getvalue(Interface.pwm1_max)
+        #return 255
+        return int(self.__getvalue(sysfs_device_hwmon.pwm1_max))
 
     @property
     def temp1_input(self):
@@ -239,11 +317,19 @@ class HwMon:
         return int(self.__getvalue(sysfs_device_hwmon.temp1_input))
 
     @property
+    def temp1_input_degrees(self):
+        return int(self.temp1_input / 1000)
+
+    @property
     def temp1_crit(self):
         """
         temperature critical max value in millidegrees Celsius
         """
         return int(int(self.__getvalue(sysfs_device_hwmon.temp1_crit)))
+
+    @property
+    def temp1_crit_degrees(self):
+        return int(self.temp1_crit / 1000)
 
     @property
     def fan1_input(self):
@@ -258,6 +344,13 @@ class HwMon:
         average power used by the GPU in microWatts
         """
         return int(self.__getvalue(sysfs_device_hwmon.power1_average))
+
+    @property
+    def power1_average_watts(self):
+        """
+        average power used by the GPU in microWatts
+        """
+        return int(self.power1_average / 1000000)
 
     @property
     def in0_input(self):
