@@ -65,7 +65,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.spinBoxInterval.valueChanged.connect(self._spin_interval_changed)
         self.ui.pushButtonEnable.clicked.connect(self._button_enable_toggled)
         self.ui.pushButtonSave.clicked.connect(self._button_save_clicked)
-        self.ui.pushButtonClose.clicked.connect(self.close)
         self.ui.comboBoxPerfProfile.currentTextChanged.connect(self._combo_perf_profile_changed)
         self.ui.pushButtonMonitor.clicked.connect(self._button_monitor_toggled)
 
@@ -249,7 +248,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _refresh_main_ui(self):
         """ Refresh the user interface with data aquired from the `hwmon` interface """
         # calculate red (higher or hotter) vs green (cooler or normal) balance
-        
+
         r = int((self.temp1_input / self.temp1_crit) * 255)
         g = 255 - r
         
