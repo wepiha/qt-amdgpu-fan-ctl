@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtGui import QPalette
+
+from common.theme import UI_DARK_ROUND_CSS
 
 import pyqtgraph as pg
 import numpy as np
@@ -266,52 +269,35 @@ class EditableGraph(pg.GraphItem):
         event.accept()
 
 class ScrollingGraph(pg.GraphItem):
-    def __init__(self, parent):
+    def __init__(self, parent, data):
         pg.GraphItem.__init__(self)
+        pg.setConfigOptions()
+
+        darkbg = parent.palette().color(QPalette.Dark).name()
+        parent.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
 
         InitPlotWidget(parent)
+        parent.setLimits(maxXRange=60)
 
         self.plotWidget = parent
-        self.name = 'graph'
+        self._name = 'graph'
+        
+        x = np.zeros(60)
+        self.data = x
+        self.plot = parent.plot(pos=self.data, pen=pg.mkPen("r", width = 2), fillLevel=-0.3, brush=(255,0,0,100))
 
-        data = np.random.normal(size=300)
+        parent.showAxis('bottom', False)
+        
+        self.pointer = 0
 
         parent.addItem(self)
-        self.plot = parent.plot(data)
-        self.pointer = 0
 
     def update(self, y):
         self.data[:-1] = self.data[1:]
-        self.data[-1] = y
+        self.data[-1] = int(y)
+        x = np.random.normal()
+
         self.pointer += 1
+        
         self.plot.setData(self.data)
         self.plot.setPos(self.pointer, 0)
-        
-# # 1) Simplest approach -- update data in the array such that plot appears to scroll
-# #    In these examples, the array size is fixed.
-# p2 = win.addPlot()
-# data1 = np.random.normal(size=300)
-
-# curve2 = p2.plot(data1)
-# ptr1 = 0
-# def update():
-#     global data1, curve1, ptr1
-#     data1[:-1] = data1[1:]  # shift data in the array one sample left
-#                             # (see also: np.roll)
-#     data1[-1] = np.random.normal()
-    
-#     ptr1 += 1
-#     curve2.setData(data1)
-#     curve2.setPos(ptr1, 0)
-
-# timer = pg.QtCore.QTimer()
-# timer.timeout.connect(update)
-# timer.start(50)
-
-
-
-# ## Start Qt event loop unless running in interactive mode or using pyside.
-# if __name__ == '__main__':
-#     import sys
-#     if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-#         QtGui.QApplication.instance().exec_()
