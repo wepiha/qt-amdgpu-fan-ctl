@@ -109,7 +109,7 @@ class sysfs_device(Enum):
     /sys/class/drm/cardN/device/
     """
     def __str__(self):
-        return str("device/%s" % self.name)
+        return f"device/{self.name}"
 
     current_link_width = "current_link_width"
     current_link_speed = "current_link_speed"
@@ -223,7 +223,7 @@ class HwMon:
         return dirs
 
     def __setperms(self, path):
-        os.system('python3 %s/common/setperms.py %s' % (os.getcwd(), path) )
+        os.system(f'python3 {os.getcwd()}/common/setperms.py {path}')
 
     def __getvalue(self, path):
         try:
@@ -242,9 +242,9 @@ class HwMon:
             with open(path, "w") as file:
                 file.write(str(value))
         except Exception as e:
-            print("__setvalue(%s, %s)::failed: %s" % (path, value, e))
+            print(f"__setvalue({path}, {value})::failed: {e}")
         else:
-            print("__setvalue(%s, %s)::success" % (path, value) )
+            print(f"__setvalue({path}, {value})::success")
 
     def update_ext_attributes(self):
         """
@@ -385,11 +385,11 @@ class HwMon:
 
         for level in sorted(levels):
             if (not level in range(len(data) - 1)):
-                raise ArithmeticError("level %d is out-of-range (range:0-%d)" % (level, len(levels)))
+                raise ArithmeticError(f"level {level} is out-of-range (range:0-{len(levels)})")
                 
-            print("enabling pp_dpm_mclk: %d (%s)" %(level, data[level]))
+            print(f"enabling pp_dpm_mclk: {level} ({data[level]})")
 
-            output = "%s %d" % (output, level)
+        output = f"{output} {level}"
         self.__setvalue(sysfs_device.pp_dpm_mclk, output)
 
     @property
@@ -428,11 +428,12 @@ class HwMon:
 
         for level in sorted(levels):
             if (not level in range(len(data) - 1)):
-                raise ArithmeticError("level %d is out-of-range (range:0-%d)" % (level, len(levels)))
+                raise ArithmeticError(f"level {level} is out-of-range (range:0-{len(levels)})")
                 
-            #print("enabling pp_dpm_sclk: %d (%s)" %(level, data[level]))
-            output = "%s %d" % (output, level)
-        #print("pp_dpm_sclk ")
+            print(f"enabling pp_dpm_sclk: {level} ({data[level]})")
+
+            output = f"{output} {level}"
+            
         self.__setvalue(sysfs_device.pp_dpm_sclk, output)
 
     @property
@@ -459,7 +460,7 @@ class HwMon:
         if not isinstance(value, int):
             raise TypeError("value must be an integer")
         if (not value in range(len(values) - 1)):
-            raise ArithmeticError("value %d is out-of-range (range:0-%d)" % (value, len(values)))
+            raise ArithmeticError(f"value {value} is out-of-range (range:0-{len(values)})")
         
         self.__setvalue(sysfs_device.pp_power_profile_mode, value)
     @property
