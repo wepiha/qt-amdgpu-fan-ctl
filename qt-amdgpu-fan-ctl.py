@@ -14,9 +14,7 @@ from PyQt5.QtGui import QPalette
 from common.hwmonInterface import HwMon, accepted_pwm1_enable, sysfs_device_hwmon, sysfm_device_hwmon_monitors, accepted_power_dpm_force_performance_level
 from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item
 from common.config import Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR
-
-UI_QLABEL_BG_CSS = "QLabel { color: white; background-color: %s; }"
-UI_DARK_ROUND_CSS = "QWidget { background-color: %s; border-style: solid; border-color: %s; border-width: 2px; border-radius: 3px; }"
+from common.theme import *
 
 GRAPHITEM_NAME = 'graph'
 
@@ -250,16 +248,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _refresh_main_ui(self):
         """ Refresh the user interface with data aquired from the `hwmon` interface """
-        # calculate red (higher or hotter) vs green (cooler or normal) balance 
+        # calculate red (higher or hotter) vs green (cooler or normal) balance
+        
         r = int((self.temp1_input / self.temp1_crit) * 255)
         g = 255 - r
         
         if ( self.is_hwmon_ctrl_state_manual() ):
-            color = "#ff5d00"
+            color = BG_COLOR_MANUAL
             button = "Disable"
             y = [(self.targetSpeed / 255) * 100]
         else:
-            color = "#0000ff"
+            color = BG_COLOR_AUTO
             button = "Enable"
             y = [self.fanSpeed]
 
