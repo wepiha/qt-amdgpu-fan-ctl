@@ -49,11 +49,11 @@ class MonitorWindow(QtWidgets.QDialog):
     def _add_monitor_widget(self, attr):
         frame = QtGui.QFrame(self.widget)
         frame.setObjectName(f"{attr['attribute']}_frame")
-        frame.setContentsMargins(0, 0, 0, 0)
+        frame.setContentsMargins(6, 6, 6, 6)
 
         gridLayout = QtWidgets.QGridLayout(frame)
         gridLayout.setObjectName(f"{attr['attribute']}_gridLayout")
-        gridLayout.setContentsMargins(0, 0, 0, 0)
+        gridLayout.setContentsMargins(6, 6, 6, 6)
 
         labelDeviceName = QtWidgets.QLabel(frame)
         labelDeviceName.setObjectName(f"{attr['attribute']}_descriptor")
@@ -121,15 +121,14 @@ class MonitorWindow(QtWidgets.QDialog):
             if ((type(objects[key]) == PlotWidget) or (objects[key] == None)):
                 continue
 
-            sub_attr = ''
-
-            if key != 'value': 
-                sub_attr = f'_{key}'
+            sub_attr = '' if (key == 'value') else f'_{key}'
             
+            # find the value for associated label
             value = getattr(self.hwmon, f'{base_attr}{sub_attr}')
+
+            # update the label text
             objects[key].setText(f"{key.title()}: {value} {monitor['unit']}")
 
+        # acquire graph for monitor, and update with the new value
         graph = self._get_monitor_widget(base_attr, 'plotWidget')
-        plot = get_plotwidget_item(graph, 'graph')
-
-        plot.update(base_value)
+        get_plotwidget_item(graph, 'graph').update(base_value)
