@@ -273,6 +273,7 @@ class ScrollingGraph(pg.GraphItem):
         pg.GraphItem.__init__(self)
         pg.setConfigOptions()
 
+        lightbg = parent.palette().color(QPalette.Light).name()
         darkbg = parent.palette().color(QPalette.Dark).name()
         parent.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
 
@@ -284,7 +285,7 @@ class ScrollingGraph(pg.GraphItem):
         
         x = np.zeros(60)
         self.data = x
-        self.plot = parent.plot(pos=self.data, pen=pg.mkPen("r", width = 2), fillLevel=-0.3, brush=(255,0,0,100))
+        self.plot = parent.plot(pos=self.data, fillLevel=-0.3, brush=(lightbg))#, pen=pg.mkPen("r", width = 2), brush=(255,0,0,100))
 
         parent.showAxis('bottom', False)
         
