@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>568</width>
-    <height>382</height>
+    <height>406</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -35,13 +35,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QComboBox" name="comboBoxCardIndex">
-        <item>
-         <property name="text">
-          <string>0</string>
-         </property>
-        </item>
-       </widget>
+       <widget class="QComboBox" name="comboBoxCardIndex"/>
       </item>
      </layout>
     </item>
@@ -76,19 +70,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="labelFanSpeedLabel">
-           <property name="minimumSize">
-            <size>
-             <width>90</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Fan Speed</string>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QLabel" name="labelFanProfileLabel">
            <property name="minimumSize">
             <size>
@@ -98,6 +79,19 @@
            </property>
            <property name="text">
             <string>Fan Control</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelFanSpeedLabel">
+           <property name="minimumSize">
+            <size>
+             <width>90</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Fan Speed</string>
            </property>
           </widget>
          </item>
@@ -123,20 +117,7 @@
             </size>
            </property>
            <property name="text">
-            <string>Core Clock</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="labelPowerLabel">
-           <property name="minimumSize">
-            <size>
-             <width>90</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>Power</string>
+            <string>Memory Clock</string>
            </property>
           </widget>
          </item>
@@ -154,6 +135,19 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="labelPowerLabel">
+           <property name="minimumSize">
+            <size>
+             <width>90</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Power</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="labelPowerProfileModeLabel">
            <property name="minimumSize">
             <size>
@@ -163,6 +157,13 @@
            </property>
            <property name="text">
             <string>Power Profile</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelCurrentLinkSpeedLabel">
+           <property name="text">
+            <string>Link Speed</string>
            </property>
           </widget>
          </item>
@@ -187,12 +188,15 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="labelFanSpeed">
+          <widget class="QLabel" name="labelFanProfileStatus">
            <property name="minimumSize">
             <size>
              <width>80</width>
              <height>0</height>
             </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true"/>
            </property>
            <property name="text">
             <string>...</string>
@@ -203,15 +207,12 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="labelFanProfileStatus">
+          <widget class="QLabel" name="labelFanSpeed">
            <property name="minimumSize">
             <size>
              <width>80</width>
              <height>0</height>
             </size>
-           </property>
-           <property name="styleSheet">
-            <string notr="true"/>
            </property>
            <property name="text">
             <string>...</string>
@@ -254,22 +255,6 @@
           </widget>
          </item>
          <item>
-          <widget class="QLabel" name="labelPower">
-           <property name="minimumSize">
-            <size>
-             <width>80</width>
-             <height>0</height>
-            </size>
-           </property>
-           <property name="text">
-            <string>...</string>
-           </property>
-           <property name="alignment">
-            <set>Qt::AlignCenter</set>
-           </property>
-          </widget>
-         </item>
-         <item>
           <widget class="QLabel" name="labelVoltage">
            <property name="minimumSize">
             <size>
@@ -286,7 +271,39 @@
           </widget>
          </item>
          <item>
+          <widget class="QLabel" name="labelPower">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QLabel" name="labelPowerProfile">
+           <property name="minimumSize">
+            <size>
+             <width>80</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLabel" name="labelCurrentLinkSpeed">
            <property name="minimumSize">
             <size>
              <width>80</width>
