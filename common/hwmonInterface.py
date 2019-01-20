@@ -121,6 +121,16 @@ class sysfs_device(Enum):
     pp_power_profile_mode = "pp_power_profile_mode"
     power_dpm_force_performance_level = "power_dpm_force_performance_level"
 
+class sysfs_device_power(Enum):
+    """
+    Enums that are related to sysfs interfaces found in
+    /sys/class/drm/cardN/device/power/
+    """
+    def __str__(self):
+        return f"device/power/{self.name}"
+
+    runtime_usage = "runtime_usage"
+
 class power_dpm_force_performance_level_profile:
     def __init__(self, data):
         pass
@@ -212,13 +222,14 @@ class HwMon:
         fan[1-*]_enable: Enable or disable the sensors.1: Enable 0: Disable
     """
     def __init__(self, interface = 0):
-        self._interfaces = self.__getinterfaces()
+        self.__interfaces = self.__getinterfaces()
         self.interface = interface
 
         self.update_ext_attributes()
 
-    def __getinterfaces(self) -> list:
-        valid_interfaces = []
+    def __getinterfaces(self) -> tuple:
+        valid_interfaces = {}
+        index = 0
 
         # look at every device in the sysfs directory
         for sysfs_dev in os.scandir(HWMON_SYSFS_DIR):
@@ -229,12 +240,12 @@ class HwMon:
             
             # check if the name exists, and ensure it matches a valid device node
             if os.path.isfile(f'{sysfs_dev.path}/name'):
-                sysfs_name = open(f'{sysfs_dev.path}/name').read()
+                sysfs_name = open(f'{sysfs_dev.path}/name').read().strip()
 
-                if (sysfs_name.strip() in SUPPORTED_SYSFS_NAMES):
-                    valid_interfaces.append(sysfs_dev.path)
-
-        valid_interfaces.sort()
+                if (sysfs_name in SUPPORTED_SYSFS_NAMES):
+                    #valid_interfaces.append(sysfs_dev.path)
+                    valid_interfaces[index] = { 'name': sysfs_name, 'path': sysfs_dev.path }
+                    index += 1
         
         return valid_interfaces
 
@@ -243,34 +254,42 @@ class HwMon:
 
     def __getvalue(self, path):
         try:
-            file = open(f'{self._interface}/{path}', "r")
-            value = file.read().strip()
+            path = f'{self.__interface["path"]}/{path}'
+            if not os.path.isfile(path):
+                return "Unsupported"
+
+            value = open(path, "r").read().strip()
         except Exception as e:
             raise e
             
         return value
     
-    def __setvalue(self, path, value):
-        path = f'{self._interface}/{path}'
+    def __setvalue(self, path: str, value: str) -> bool:
+        path = f'{self.__interface["path"]}/{path}'
         try:
             self.__setperms(path)
-
-            with open(path, "w") as file:
-                file.write(str(value))
+            
+            open(path, "w").write(str(value))
         except Exception as e:
             print(f"__setvalue({path}, {value})::failed: {e}")
+            return False
         else:
             print(f"__setvalue({path}, {value})::success")
+            return True
+
+    @property
+    def interfaces(self) -> list:
+        return self.__interfaces
 
     @property
     def interface(self):
-        return self._interface
+        return self.__interface
     @interface.setter
     def interface(self, value):
-        if value not in range(len(self._interfaces)):
+        if value not in self.__interfaces:
             raise IndexError(f'{value} is out of range of 0-{len(self._interfaces)}')
         
-        self._interface = self._interfaces[value]
+        self.__interface = self.__interfaces[value]
 
     def update_ext_attributes(self):
         """
@@ -290,7 +309,11 @@ class HwMon:
                     curr_value = new_value
 
                 setattr(self, full_attr, curr_value)
-        
+    
+    @property
+    def name(self):
+        return str(self.__getvalue(sysfs_device_hwmon.name))
+
     @property
     def pwm1(self):
         return int(self.__getvalue(sysfs_device_hwmon.pwm1))
@@ -344,6 +367,9 @@ class HwMon:
 
     @property
     def temp1_input_degrees(self):
+        """
+        the on die GPU temperature in degrees Celsius
+        """
         return int(self.temp1_input / 1000)
 
     @property
@@ -505,7 +531,10 @@ class HwMon:
         return result
 
     @property
-    def pp_power_profile_mode_active(self):
+    def pp_power_profile_mode_active(self) -> pp_power_profile:
+        """
+        returns the active pp_power_profile_mode
+        """
         for profile in self.pp_power_profile_list:
             if (profile.active):
                 return profile
@@ -549,3 +578,11 @@ class HwMon:
             raise TypeError("value must be an instance of accepted_power_dpm_state")
         if (sysfs_device.power_dpm_state.value != value.value):
             self.__setvalue(sysfs_device.power_dpm_state, value.value)
+
+    @property
+    def current_link_speed(self):
+        return self.__getvalue(sysfs_device.current_link_speed)
+
+    @property
+    def runtime_usage(self):
+        return self.__getvalue(sysfs_device_power.runtime_usage)
