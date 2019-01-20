@@ -6,6 +6,7 @@ from enum import Enum
 #
 
 HWMON_SYSFS_DIR = "/sys/class/hwmon/"
+SUPPORTED_SYSFS_NAMES = ['amdgpu']
 
 class accepted_pwm1_enable(Enum):
     """
@@ -212,22 +213,37 @@ class HwMon:
     """
     def __init__(self, interface = 0):
         self._interfaces = self.__getinterfaces()
-        self._interface = self._interfaces[interface]
+        self.interface = interface
 
         self.update_ext_attributes()
 
-    def __getinterfaces(self):
-        dirs = [f.path + "/%s" for f in os.scandir(HWMON_SYSFS_DIR) if f.is_dir() ]
-        dirs.sort()
+    def __getinterfaces(self) -> list:
+        valid_interfaces = []
+
+        # look at every device in the sysfs directory
+        for sysfs_dev in os.scandir(HWMON_SYSFS_DIR):
+
+            # we only want subdirectories, not files here
+            if not sysfs_dev.is_dir():
+                continue
+            
+            # check if the name exists, and ensure it matches a valid device node
+            if os.path.isfile(f'{sysfs_dev.path}/name'):
+                sysfs_name = open(f'{sysfs_dev.path}/name').read()
+
+                if (sysfs_name.strip() in SUPPORTED_SYSFS_NAMES):
+                    valid_interfaces.append(sysfs_dev.path)
+
+        valid_interfaces.sort()
         
-        return dirs
+        return valid_interfaces
 
     def __setperms(self, path):
         os.system(f'python3 {os.getcwd()}/common/setperms.py {path}')
 
     def __getvalue(self, path):
         try:
-            file = open(self._interface % path, "r")
+            file = open(f'{self._interface}/{path}', "r")
             value = file.read().strip()
         except Exception as e:
             raise e
@@ -235,7 +251,7 @@ class HwMon:
         return value
     
     def __setvalue(self, path, value):
-        path = self._interface % path
+        path = f'{self._interface}/{path}'
         try:
             self.__setperms(path)
 
@@ -245,6 +261,16 @@ class HwMon:
             print(f"__setvalue({path}, {value})::failed: {e}")
         else:
             print(f"__setvalue({path}, {value})::success")
+
+    @property
+    def interface(self):
+        return self._interface
+    @interface.setter
+    def interface(self, value):
+        if value not in range(len(self._interfaces)):
+            raise IndexError(f'{value} is out of range of 0-{len(self._interfaces)}')
+        
+        self._interface = self._interfaces[value]
 
     def update_ext_attributes(self):
         """
