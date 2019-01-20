@@ -65,6 +65,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.spinBoxInterval.valueChanged.connect(self._spin_interval_changed)
         self.ui.pushButtonEnable.clicked.connect(self._button_enable_toggled)
         self.ui.pushButtonSave.clicked.connect(self._button_save_clicked)
+        self.ui.comboBoxCardIndex.currentIndexChanged.connect(self._combo_card_index_changed)
         self.ui.comboBoxPerfProfile.currentTextChanged.connect(self._combo_perf_profile_changed)
         self.ui.pushButtonMonitor.clicked.connect(self._button_monitor_toggled)
 
@@ -202,6 +203,11 @@ class MainWindow(QtWidgets.QMainWindow):
         if ( self.ui.spinBoxInterval.value != value ):
             self.ui.spinBoxInterval.setValue(int(value))
     
+    def _combo_card_index_changed(self, value):
+        if (value == -1):
+            return
+        self.hwmon.interface = value
+
     def _combo_perf_profile_changed(self, value):
         """ Set the `power_dpm_force_performance_level` when the user changes the value """
         for level in accepted_power_dpm_force_performance_level:
@@ -255,14 +261,14 @@ class MainWindow(QtWidgets.QMainWindow):
         if ( self.is_hwmon_ctrl_state_manual() ):
             color = BG_COLOR_MANUAL
             button = "Disable"
-            y = [(self.targetSpeed / 255) * 100]
+            target_indicator_y = [(self.targetSpeed / 255) * 100]
         else:
             color = BG_COLOR_AUTO
             button = "Enable"
-            y = [self.fanSpeed]
+            target_indicator_y = [self.fanSpeed]
 
         get_plotwidget_item(self.ui.graphicsView, 'fTarget').setPen(color)
-        get_plotwidget_item(self.ui.graphicsView, 'fTarget').setData(self.temp1_input, y)
+        get_plotwidget_item(self.ui.graphicsView, 'fTarget').setData(self.temp1_input, target_indicator_y)
 
         get_plotwidget_item(self.ui.graphicsView, 'currTemp').setValue(self.temp1_input)
         get_plotwidget_item(self.ui.graphicsView, 'currFan').setValue(self.fanSpeed)
@@ -287,6 +293,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.comboBoxPerfProfile.setCurrentText(self.hwmon.power_dpm_force_performance_level.title())
         self.ui.labelPowerProfile.setText(self.hwmon.pp_power_profile_mode_active.mode_name.title())
     
+
+        if (len(self.hwmon.interfaces) != self.ui.comboBoxCardIndex.count()):
+            self.ui.comboBoxCardIndex.clear()
+            for i in range(len(self.hwmon.interfaces)):
+                self.ui.comboBoxCardIndex.addItem(f'{str(i)} - {self.hwmon.interfaces[i]["name"]}')
+
+        self.ui.labelCurrentLinkSpeed.setText(self.hwmon.current_link_speed.title())
+
     def _refresh_monitor_ui(self, force=False):
         if ((not self.monitoring) and (not force)):
             return
