@@ -78,29 +78,35 @@ class sysfs_device_hwmon(Enum):
     in0_input = "in0_input"
 
 class sysfm_device_hwmon_monitors(Enum):
+    # FIXME: the maximum values should be acquired from hardware/other instead of fixed 
     temp1_input = {
         'attribute': 'temp1_input_degrees',
         'descriptor': 'Temperature',
+        'maximum': 120,
         'unit': '°C'
     }
     fan1_input = {
         'attribute': 'fan1_input',
         'descriptor': 'Fan Speed',
+        'maximum': 5000,
         'unit': 'RPM'
     }
     pp_dpm_mclk_mhz = { 
         'attribute': 'pp_dpm_mclk_mhz',
         'descriptor': 'Memory Clock',
+        'maximum': 3000,
         'unit': 'MHz'
     }
     pp_dpm_sclk_mhz = { 
         'attribute': 'pp_dpm_sclk_mhz',
         'descriptor': 'Core Clock',
+        'maximum': 5000,
         'unit': 'MHz'
     }
     power1_average = {
         'attribute': 'power1_average_watts',
         'descriptor': 'Power Average',
+        'maximum': 500,
         'unit': 'W'
     }
 
