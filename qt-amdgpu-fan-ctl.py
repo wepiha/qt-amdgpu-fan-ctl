@@ -3,17 +3,21 @@
 import sys, os
 os.environ['PYQTGRAPH_QT_LIB'] = 'PyQt5'
 
-import json
 import pyqtgraph as pg
 import ui.mainwindow as mainwindow
 from ui.monitorwindow import MonitorWindow
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtCore, QtWidgets
 
 from common.hwmonInterface import HwMon, accepted_pwm1_enable, accepted_power_dpm_force_performance_level
 from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item, graph_from_widget
 from common.config import Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR
 from common.theme import *
+
+import logging
+logging.basicConfig(level=os.environ.get("LOGLEVEL", "INFO"))
+
+LOG = logging.getLogger(__name__)
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -21,7 +25,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui = mainwindow.Ui_MainWindow()
         self.ui.setupUi(self)
 
-        self._init_globals()
+        self._init_locals()
         self._init_graphview()
         self._init_timers()
         self._init_pyqtsignals()
@@ -31,21 +35,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # start working now
         self._timer_update_tick()
-        self._refresh_monitor_ui(True)
 
-    def _init_globals(self):
-        """ Initializes `global` variables """
+    def _init_locals(self):
+        """ Initializes `local` variables """
         pg.setConfigOptions(antialias=True)
 
         self.hwmon = HwMon()
         self.config = Config()
         
-        self.lastUpdate = self.hwmon.temp1_input
-        self.lastEnabled = False
         self.lastFanValue = -1
-        self.hysteresis = self.lastUpdate / 1000
-
-        self.monitoring = False
 
     def _init_timers(self):
         """ Initializes timers and starts them """
@@ -53,9 +51,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.timerUI.timeout.connect(self._timer_update_tick)
         self.timerUI.start()
 
-        self.timerCtl = QtCore.QTimer() 
-        self.timerCtl.timeout.connect(self._timer_ctrl_tick)
-        self.timerCtl.start(250)
+        self.timerMonitor = QtCore.QTimer() 
+        self.timerMonitor.timeout.connect(self._timer_monitor_tick)
+        self.timerMonitor.start(1000)
 
     def _init_pyqtsignals(self):
         """ Connects pyqt5 signals to various slots """
@@ -152,12 +150,10 @@ class MainWindow(QtWidgets.QMainWindow):
         """ Handle close event for monitor window """
         # restore monitor window checked state
         self.ui.pushButtonMonitor.setChecked(False)
-        self.monitoring = False
 
     def _init_monitor_ui(self):
         self.monwindow = MonitorWindow(self.hwmon)
         self.monwindow.closeEvent = self._monitor_closed
-        self._refresh_monitor_ui(True)
 
     def _button_monitor_toggled(self, value):
         if (value):
@@ -167,11 +163,8 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.monwindow.hide()
 
-        self.monitoring = value
-
     def _button_enable_toggled(self, value):
         """ Changes the control state """
-        self.lastEnabled = value
         self.hwmon.pwm1_enable = accepted_pwm1_enable.Manual if value else accepted_pwm1_enable.Auto
 
     def _button_save_clicked(self):
@@ -204,7 +197,6 @@ class MainWindow(QtWidgets.QMainWindow):
         """ Event occurs on timertick from the Update Interval on the `mainwindow` """
         self._get_hwmon_values()
         self._refresh_main_ui()
-        self._refresh_monitor_ui()
         self._set_hwmon_values()
 
     def _get_hwmon_values(self):
@@ -233,7 +225,7 @@ class MainWindow(QtWidgets.QMainWindow):
                 self.hwmon.pwm1 = self.targetSpeed
                 self.lastFanValue = self.targetSpeed
         else:
-            if ( self.lastEnabled ):
+            if ( self.ui.pushButtonEnable.isChecked() ):
                 # restore the state we set last
                 self.hwmon.pwm1_enable = accepted_pwm1_enable.Manual
 
@@ -287,15 +279,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.labelCurrentLinkSpeed.setText(self.hwmon.current_link_speed.title())
 
-    def _refresh_monitor_ui(self, force=False):
-        if ((not self.monitoring) and (not force)):
-            return
-        
+    def _timer_monitor_tick(self):
         self.monwindow.refresh_monitors()
-
-    def _timer_ctrl_tick(self):
-        self.hysteresis = (self.hwmon.temp1_input + self.lastUpdate) / 2000
-        self.lastUpdate = self.hwmon.temp1_input
         
     def _mainwindow_closeevent(self, *args, **kwargs):
         """ Handles `mainwindow` closeEvent"""
