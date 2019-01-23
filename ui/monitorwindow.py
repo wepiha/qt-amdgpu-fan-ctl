@@ -5,7 +5,7 @@ import pyqtgraph as pg
 from enum import Enum
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import PlotWidget
-from common.graphs import InitPlotWidget, ScrollingGraph, get_plotwidget_item
+from common.graphs import InitPlotWidget, ScrollingGraph, graph_add_data
 from common.hwmonInterface import sysfm_device_hwmon_monitors, HwMon
 
 class MonitorWindow(QtWidgets.QDialog):
@@ -27,33 +27,39 @@ class MonitorWindow(QtWidgets.QDialog):
             self._add_monitor_widget(attr.value)
 
     def _init_layout(self):
-        self.widget = QtWidgets.QWidget()
-        self.widget.setContentsMargins(0, 0, 0, 0)
+        self.centralwidget = QtWidgets.QWidget(self)
+        self.centralwidget.setContentsMargins(0, 0, 0, 0)
 
-        layout = QtGui.QVBoxLayout(self)
+        layout = QtGui.QVBoxLayout(self.centralwidget)
         layout.addStretch()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.widget.setLayout(layout)
+        self.centralwidget.setLayout(layout)
 
         scroll = QtGui.QScrollArea()
         scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         scroll.setWidgetResizable(True)
-        scroll.setWidget(self.widget)
+        scroll.setWidget(self.centralwidget)
+        scroll.setFrameShape(QtWidgets.QFrame.StyledPanel)
+        scroll.setFrameShadow(QtWidgets.QFrame.Plain)
+        scroll.setContentsMargins(0, 0, 0, 0)
 
         vLayout = QtGui.QVBoxLayout(self)
         vLayout.addWidget(scroll)
+        vLayout.setSpacing(0)
+        vLayout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(vLayout)
 
     def _add_monitor_widget(self, attr):
-        frame = QtGui.QFrame(self.widget)
+        frame = QtGui.QFrame(self.centralwidget)
         frame.setObjectName(f"{attr['attribute']}_frame")
-        frame.setContentsMargins(6, 6, 6, 6)
+        frame.setContentsMargins(0, 0, 0, 0)
 
         gridLayout = QtWidgets.QGridLayout(frame)
         gridLayout.setObjectName(f"{attr['attribute']}_gridLayout")
-        gridLayout.setContentsMargins(6, 6, 6, 6)
+        gridLayout.setContentsMargins(0, 0, 0, 0)
+        gridLayout.setSpacing(0)
 
         labelDeviceName = QtWidgets.QLabel(frame)
         labelDeviceName.setObjectName(f"{attr['attribute']}_descriptor")
@@ -82,14 +88,15 @@ class MonitorWindow(QtWidgets.QDialog):
         gridLayout.addWidget(labelDeviceMin, 2, 0, 1, 1)
         gridLayout.addWidget(labelDeviceMax, 2, 1, 1, 1)
 
-        ScrollingGraph(graphicsView, getattr(self.hwmon, attr['attribute']))
+        InitPlotWidget(graphicsView)
+        ScrollingGraph(graphicsView, getattr(self.hwmon, attr['attribute']), attr['maximum'])
 
-        self.widget.layout().addWidget(frame)
+        self.centralwidget.layout().addWidget(frame)
 
     def _get_frame_widget(self, name):
 
-        for i in range(1, self.widget.layout().count()):
-            frame = self.widget.layout().itemAt(i).widget()
+        for i in range(1, self.centralwidget.layout().count()):
+            frame = self.centralwidget.layout().itemAt(i).widget()
 
             if (frame.objectName() == f'{name}_frame'):
                 return frame
@@ -131,4 +138,4 @@ class MonitorWindow(QtWidgets.QDialog):
 
         # acquire graph for monitor, and update with the new value
         graph = self._get_monitor_widget(base_attr, 'plotWidget')
-        get_plotwidget_item(graph, 'graph').update(base_value)
+        graph_add_data(graph, base_value)
