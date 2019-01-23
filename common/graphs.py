@@ -3,19 +3,35 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPalette
 
-from common.theme import UI_DARK_ROUND_CSS
+from common.theme import set_dark_rounded_css
 
 import pyqtgraph as pg
+from pyqtgraph import PlotWidget, PlotItem
+
 import numpy as np
 import math
 
-def get_plotwidget_item(parent, name):
+def graph_from_widget(parent):
+    return get_plotwidget_item(parent, 'graph')
+
+def graph_add_data(parent, data):
+    graph = graph_from_widget(parent)
+    graph_from_widget(parent).append_data(data)
+
+def graph_add_point(parent):
+    graph_from_widget(parent).addPoint
+
+def graph_remove_point(parent):
+    graph_from_widget(parent).removePoint
+
+def get_plotwidget_item(parent, name = 'graph') -> PlotItem:
     """ Helper function to acquire items added to the `PlotWidget` """
     for item in parent.plotItem.items:
         if (hasattr(item, '_name')) and (item._name == name):
             return item
     
     raise LookupError("The item '%s' was not found" % name)
+
 
 def InitPlotWidget(plotwidget, **kwds):
     
@@ -76,13 +92,13 @@ def InitPlotWidget(plotwidget, **kwds):
 class EditableGraph(pg.GraphItem):
     MIN_POINT_DISTANCE = 16
 
-    def __init__(self, parent, data, name, staticPos=None):
-        pg.GraphItem.__init__(self)
+    def __init__(self, parent, data, staticPos=None):
+        super().__init__()
 
         self.plotWidget = parent
 
         # adds _name attribute similar tto those in plotItem.items
-        self._name = name
+        self._name = 'graph'
         self.staticPos = staticPos
 
         self.dragPoint = None
@@ -90,6 +106,7 @@ class EditableGraph(pg.GraphItem):
         
         self.setData(pos=np.stack(data))
 
+        # adds pg.GraphItem to the parent PlotItems
         parent.addItem(self)
 
     def setData(self, **kwds):
@@ -101,7 +118,7 @@ class EditableGraph(pg.GraphItem):
             if (pos[0] != [0, 0]):
                 pos.insert(0, [0, 0])
 
-            if (self.staticPos) and (pos[len(pos) - 1] != self.staticPos):
+            if (self.staticPos is not None) and (pos[len(pos) - 1] != self.staticPos):
                 pos.append(self.staticPos)
                 self.setData(pos=np.stack(pos))
                 return
@@ -113,7 +130,7 @@ class EditableGraph(pg.GraphItem):
 
             self.updateGraph()
     def updateGraph(self):
-        pg.GraphItem.setData(self, **self.data)
+        super().setData(**self.data)
 
     def addPoint(self):
         # work out where the largest gap occurs and insert the new point in the middle
@@ -269,36 +286,45 @@ class EditableGraph(pg.GraphItem):
         event.accept()
 
 class ScrollingGraph(pg.GraphItem):
-    def __init__(self, parent, data):
-        pg.GraphItem.__init__(self)
-        pg.setConfigOptions()
+    def __init__(self, parent: PlotWidget, data: list, maxY: int):
+        super().__init__()
 
-        lightbg = parent.palette().color(QPalette.Light).name()
-        darkbg = parent.palette().color(QPalette.Dark).name()
-        parent.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
-
-        InitPlotWidget(parent)
-        parent.setLimits(maxXRange=60)
-
-        self.plotWidget = parent
-        self._name = 'graph'
-        
-        x = np.zeros(60)
-        self.data = x
-        self.plot = parent.plot(pos=self.data, fillLevel=-0.3, brush=(lightbg))#, pen=pg.mkPen("r", width = 2), brush=(255,0,0,100))
+        self.plot = pg.PlotDataItem()
+        self.plot._name = 'graph'
 
         parent.showAxis('bottom', False)
-        
-        self.pointer = 0
+        parent.setLimits(
+                yMin = -3,
+                #xMax = 60,
+                yMax = maxY - 3,
+                maxXRange = 60,
+                minYRange = maxY,
+                maxYRange = maxY
+            )
 
-        parent.addItem(self)
+        highlight = parent.palette().color(QPalette.Highlight)
 
-    def update(self, y):
-        self.data[:-1] = self.data[1:]
-        self.data[-1] = int(y)
-        x = np.random.normal()
+        self.plot.setPen(pg.mkPen(highlight, width = 2))
+        self.plot.setBrush(highlight.darker())
+        self.plot.setFillLevel(-1.0)
+        self.plot.setData(np.zeros(60))# + int(data))
 
-        self.pointer += 1
-        
-        self.plot.setData(self.data)
-        self.plot.setPos(self.pointer, 0)
+        self.plot.append_data = self.append_data
+
+        parent.getViewBox().setMouseEnabled(False)
+        # prevent mouse wheel event
+        parent.getViewBox().wheelEvent = lambda event: None
+        parent.getViewBox().hoverEvent = self.mouse_hover
+        parent.addItem(self.plot)
+
+    def mouse_hover(self, event):
+        if event.exit:
+            return
+
+        #test = pg.GraphicsScene().itemsNearEvent()
+
+    def append_data(self, y):
+        self.plot.yData[:-1] = self.plot.yData[1:]
+        self.plot.yData[-1] = int(y)
+
+        self.plot.setData(self.plot.yData)
