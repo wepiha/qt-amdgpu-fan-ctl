@@ -12,11 +12,9 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPalette
 
 from common.hwmonInterface import HwMon, accepted_pwm1_enable, sysfs_device_hwmon, sysfm_device_hwmon_monitors, accepted_power_dpm_force_performance_level
-from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item
+from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item, graph_from_widget, graph_add_point, graph_remove_point
 from common.config import Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR
 from common.theme import *
-
-GRAPHITEM_NAME = 'graph'
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self):
@@ -71,8 +69,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self._spin_interval_changed(self.config.getValue(CONFIG_INTERVAL_VAR))
 
-        self.ui.pushButtonAdd.clicked.connect(get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).addPoint)
-        self.ui.pushButtonRemove.clicked.connect(get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).removePoint)
+        self.ui.pushButtonAdd.clicked.connect(get_plotwidget_item(self.ui.graphicsView).addPoint)
+        self.ui.pushButtonRemove.clicked.connect(get_plotwidget_item(self.ui.graphicsView).removePoint)
 
         self.closeEvent = self._mainwindow_closeevent
 
@@ -81,7 +79,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self._init_graph()
         self._init_graph_lines()
         self._init_graph_legend()
-        self._init_graph_coords()
 
     def _init_graph(self):
         """ 
@@ -105,7 +102,6 @@ class MainWindow(QtWidgets.QMainWindow):
         EditableGraph(
             self.ui.graphicsView,
             data=self.config.getValue(CONFIG_POINT_VAR),
-            name=GRAPHITEM_NAME,
             staticPos=[self.hwmon.temp1_crit / 1000, 100]
         )
        
@@ -128,12 +124,12 @@ class MainWindow(QtWidgets.QMainWindow):
         """ Adds a `LegendItem` which has a `ScatterPlotItem` for both the Max Temperature and Fan Targets """
         legendItem = pg.LegendItem()
         
-        tempMax = pg.ScatterPlotItem(pen=pg.mkPen('#ff0000'))
+        tempMax = pg.ScatterPlotItem(pen=pg.mkPen('#ff0000'), width=2)
         tempMax._name = 'tMax'
         tempMax.setData([int(self.hwmon.temp1_crit / 1000)], [100], symbol='d')
 
-        fanTarget = pg.ScatterPlotItem(pen=pg.mkPen('#0000ff'))
-        fanTarget._name = 'fTarget'
+        fanTarget = pg.ScatterPlotItem(pen=pg.mkPen('#0000ff'), width=2)
+        fanTarget._name = 'targetFan'
         fanTarget.setData([-10], [-10], symbol='d')
 
         legendItem.addItem(tempMax, name='GPU tMax')
@@ -144,18 +140,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.ui.graphicsView.addItem(fanTarget)
         self.ui.graphicsView.addItem(legendItem)
 
-    def _init_graph_coords(self):
-        """ Adds a co-ordinate display to the `PlotWidget` when the user drags a point """
-        dragCoordText = pg.TextItem()
-        self.ui.graphicsView.addItem(dragCoordText)
-
     def _init_styles(self):
         """ Sets the UI styles for plot and display widgets"""
-        darkbg = self.ui.centralwidget.palette().color(QPalette.Dark).name()
-
-        #self.ui.graphicsView.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
-        self.ui.frame.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg ) )
-        self.ui.widget.setStyleSheet( UI_DARK_ROUND_CSS % ( darkbg, darkbg) )
+        set_dark_rounded_css(self.ui.frame)
 
     def _init_drivervalues(self):
         """ Adds various data pieces to the `mainwindow` widgets """
@@ -190,7 +177,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _button_save_clicked(self):
         """ Saves and applies the fan curve """
-        data = get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).pos.tolist()
+        data = get_plotwidget_item(self.ui.graphicsView).pos.tolist()
 
         self.config.setValue(CONFIG_POINT_VAR, data)
         self.config.save()
@@ -230,7 +217,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.temp1_crit = self.hwmon.temp1_crit_degrees
         self.pwm1_enable = self.hwmon.pwm1_enable
         
-        intesect = get_plotwidget_item(self.ui.graphicsView, GRAPHITEM_NAME).getIntersection(x=self.temp1_input)
+        intesect = graph_from_widget(self.ui.graphicsView).getIntersection(x=self.temp1_input)
 
         self.targetSpeed = int((intesect / 100) * self.pwm1_max)
         self.fanSpeed = int((self.hwmon.pwm1 / self.pwm1_max) * 100)
@@ -267,8 +254,8 @@ class MainWindow(QtWidgets.QMainWindow):
             button = "Enable"
             target_indicator_y = [self.fanSpeed]
 
-        get_plotwidget_item(self.ui.graphicsView, 'fTarget').setPen(color)
-        get_plotwidget_item(self.ui.graphicsView, 'fTarget').setData(self.temp1_input, target_indicator_y)
+        get_plotwidget_item(self.ui.graphicsView, 'targetFan').setPen(color)
+        get_plotwidget_item(self.ui.graphicsView, 'targetFan').setData(self.temp1_input, target_indicator_y)
 
         get_plotwidget_item(self.ui.graphicsView, 'currTemp').setValue(self.temp1_input)
         get_plotwidget_item(self.ui.graphicsView, 'currFan').setValue(self.fanSpeed)
