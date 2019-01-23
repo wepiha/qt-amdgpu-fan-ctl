@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
+import math
+import pyqtgraph as pg
+from pyqtgraph import PlotWidget, PlotItem
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPalette
 
 from common.theme import set_dark_rounded_css
+import logging
 
-import pyqtgraph as pg
-from pyqtgraph import PlotWidget, PlotItem
+LOG = logging.getLogger(__name__)
 
-import numpy as np
-import math
 
 def graph_from_widget(parent):
     return get_plotwidget_item(parent, 'graph')
@@ -92,7 +94,7 @@ def InitPlotWidget(plotwidget, **kwds):
 class EditableGraph(pg.GraphItem):
     MIN_POINT_DISTANCE = 16
 
-    def __init__(self, parent, data, staticPos=None):
+    def __init__(self, parent: PlotWidget, data: list, staticPos=None):
         super().__init__()
 
         self.plotWidget = parent
@@ -127,6 +129,9 @@ class EditableGraph(pg.GraphItem):
             self.data['adj'] = np.column_stack((np.arange(0, npts-1), np.arange(1, npts)))
             self.data['data'] = np.empty(npts, dtype=[('index', int)])
             self.data['data']['index'] = np.arange(npts)
+
+            # force array values to be integers 
+            self.data['pos'] = self.data['pos'].astype(int)
 
             self.updateGraph()
     def updateGraph(self):
@@ -166,13 +171,13 @@ class EditableGraph(pg.GraphItem):
 
         for i in range(1, len(self.data['pos']) - 1):
             h = self.getPointDistance(i, i + 1)
-            #print("%d is %d " % (i, h))
+            LOG.info(f"{i} is {h} ")
             if (h < length):
                 delpos = i
                 length = h
         
         flat = self.data['pos'].tolist()
-        #print("Removing %d (%d)" % (delpos, length))
+        LOG.info(f"removePoint() index={delpos}, length={length}")
 
         del flat[delpos]
         self.setData(pos=np.stack(flat))
@@ -320,8 +325,6 @@ class ScrollingGraph(pg.GraphItem):
     def mouse_hover(self, event):
         if event.exit:
             return
-
-        #test = pg.GraphicsScene().itemsNearEvent()
 
     def append_data(self, y):
         self.plot.yData[:-1] = self.plot.yData[1:]
