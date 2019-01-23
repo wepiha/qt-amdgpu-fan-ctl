@@ -1,9 +1,12 @@
 import os
+import logging
 from enum import Enum
 #
 # Documentation for the amdgpu hwmon interfaces
 # Source: https://www.kernel.org/doc/html/latest/gpu/amdgpu.html#hwmon-interfaces 
 #
+
+LOG = logging.getLogger(__name__)
 
 HWMON_SYSFS_DIR = "/sys/class/hwmon/"
 SUPPORTED_SYSFS_NAMES = ['amdgpu']
@@ -88,19 +91,19 @@ class sysfm_device_hwmon_monitors(Enum):
     fan1_input = {
         'attribute': 'fan1_input',
         'descriptor': 'Fan Speed',
-        'maximum': 5000,
+        'maximum': 4000,
         'unit': 'RPM'
     }
     pp_dpm_mclk_mhz = { 
         'attribute': 'pp_dpm_mclk_mhz',
         'descriptor': 'Memory Clock',
-        'maximum': 3000,
+        'maximum': 2500,
         'unit': 'MHz'
     }
     pp_dpm_sclk_mhz = { 
         'attribute': 'pp_dpm_sclk_mhz',
         'descriptor': 'Core Clock',
-        'maximum': 5000,
+        'maximum': 2500,
         'unit': 'MHz'
     }
     power1_average = {
@@ -235,7 +238,6 @@ class HwMon:
 
     def __getinterfaces(self) -> tuple:
         valid_interfaces = {}
-        index = 0
 
         # look at every device in the sysfs directory
         for sysfs_dev in os.scandir(HWMON_SYSFS_DIR):
@@ -249,9 +251,10 @@ class HwMon:
                 sysfs_name = open(f'{sysfs_dev.path}/name').read().strip()
 
                 if (sysfs_name in SUPPORTED_SYSFS_NAMES):
-                    #valid_interfaces.append(sysfs_dev.path)
-                    valid_interfaces[index] = { 'name': sysfs_name, 'path': sysfs_dev.path }
-                    index += 1
+                    valid_interfaces[len(valid_interfaces)] = { 
+                        'name': sysfs_name, 
+                        'path': sysfs_dev.path 
+                    }
         
         return valid_interfaces
 
@@ -260,27 +263,27 @@ class HwMon:
 
     def __getvalue(self, path):
         try:
-            path = f'{self.__interface["path"]}/{path}'
-            if not os.path.isfile(path):
+            sysfs_file = f'{self.__interface["path"]}/{path}'
+            if not os.path.isfile(sysfs_file):
                 return "Unsupported"
 
-            value = open(path, "r").read().strip()
+            value = open(sysfs_file, "r").read().strip()
         except Exception as e:
             raise e
             
         return value
     
     def __setvalue(self, path: str, value: str) -> bool:
-        path = f'{self.__interface["path"]}/{path}'
+        sysfs_file = f'{self.__interface["path"]}/{path}'
         try:
-            self.__setperms(path)
+            self.__setperms(sysfs_file)
             
-            open(path, "w").write(str(value))
+            open(sysfs_file, "w").write(str(value))
         except Exception as e:
-            print(f"__setvalue({path}, {value})::failed: {e}")
+            LOG.info(f"__setvalue({path}, {value})::failed: {e}")
             return False
         else:
-            print(f"__setvalue({path}, {value})::success")
+            LOG.info(f"__setvalue({path}, {value})::success")
             return True
 
     @property
@@ -312,6 +315,7 @@ class HwMon:
                 curr_value = getattr(self, full_attr, new_value)
 
                 if ((ext_attr == 'min') and (new_value < curr_value)) or ((ext_attr == 'max') and (new_value > curr_value)):
+                    LOG.debug(f"{base_attr}_{ext_attr} was={curr_value} now={new_value}")
                     curr_value = new_value
 
                 setattr(self, full_attr, curr_value)
@@ -445,7 +449,7 @@ class HwMon:
             if (not level in range(len(data) - 1)):
                 raise ArithmeticError(f"level {level} is out-of-range (range:0-{len(levels)})")
                 
-            print(f"enabling pp_dpm_mclk: {level} ({data[level]})")
+            LOG.info(f"enabling pp_dpm_mclk: {level} ({data[level]})")
 
         output = f"{output} {level}"
         self.__setvalue(sysfs_device.pp_dpm_mclk, output)
@@ -488,7 +492,7 @@ class HwMon:
             if (not level in range(len(data) - 1)):
                 raise ArithmeticError(f"level {level} is out-of-range (range:0-{len(levels)})")
                 
-            print(f"enabling pp_dpm_sclk: {level} ({data[level]})")
+            LOG.info(f"enabling pp_dpm_sclk: {level} ({data[level]})")
 
             output = f"{output} {level}"
             
