@@ -9,10 +9,9 @@ import ui.mainwindow as mainwindow
 from ui.monitorwindow import MonitorWindow
 
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QPalette
 
-from common.hwmonInterface import HwMon, accepted_pwm1_enable, sysfs_device_hwmon, sysfm_device_hwmon_monitors, accepted_power_dpm_force_performance_level
-from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item, graph_from_widget, graph_add_point, graph_remove_point
+from common.hwmonInterface import HwMon, accepted_pwm1_enable, accepted_power_dpm_force_performance_level
+from common.graphs  import InitPlotWidget, EditableGraph, get_plotwidget_item, graph_from_widget
 from common.config import Config, CONFIG_INTERVAL_VAR, CONFIG_POINT_VAR
 from common.theme import *
 
@@ -292,11 +291,7 @@ class MainWindow(QtWidgets.QMainWindow):
         if ((not self.monitoring) and (not force)):
             return
         
-        self.hwmon.update_ext_attributes()
-
-        for attr in sysfm_device_hwmon_monitors:
-            if hasattr(self.hwmon, attr.value['attribute']):
-                self.monwindow.append_monitor_data(attr.value)
+        self.monwindow.refresh_monitors()
 
     def _timer_ctrl_tick(self):
         self.hysteresis = (self.hwmon.temp1_input + self.lastUpdate) / 2000
