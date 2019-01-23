@@ -143,3 +143,11 @@ class MonitorWindow(QtWidgets.QDialog):
         # acquire graph for monitor, and update with the new value
         graph = self._get_monitor_widget(base_attr, 'plotWidget')
         graph_add_data(graph, base_value)
+
+    def refresh_monitors(self):
+
+        self.hwmon.update_ext_attributes()
+
+        for attr in sysfm_device_hwmon_monitors:
+            if hasattr(self.hwmon, attr.value['attribute']):
+                self.append_monitor_data(attr.value)
