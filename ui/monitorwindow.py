@@ -7,6 +7,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import PlotWidget
 from common.graphs import InitPlotWidget, ScrollingGraph, graph_add_data
 from common.hwmonInterface import sysfm_device_hwmon_monitors, HwMon
+from common.theme import set_dark_rounded_css
 
 class MonitorWindow(QtWidgets.QDialog):
     def __init__(self, hwmon: HwMon):
@@ -25,6 +26,8 @@ class MonitorWindow(QtWidgets.QDialog):
 
         for attr in sysfm_device_hwmon_monitors:
             self._add_monitor_widget(attr.value)
+        
+        self.setFixedHeight(628)
 
     def _init_layout(self):
         self.centralwidget = QtWidgets.QWidget(self)
@@ -90,6 +93,7 @@ class MonitorWindow(QtWidgets.QDialog):
 
         InitPlotWidget(graphicsView)
         ScrollingGraph(graphicsView, getattr(self.hwmon, attr['attribute']), attr['maximum'])
+        set_dark_rounded_css(graphicsView)
 
         self.centralwidget.layout().addWidget(frame)
 
