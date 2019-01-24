@@ -7,7 +7,6 @@ from pyqtgraph import PlotWidget, PlotItem
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPalette
 
-from common.theme import set_dark_rounded_css
 import logging
 
 LOG = logging.getLogger(__name__)
@@ -19,12 +18,6 @@ def graph_from_widget(parent):
 def graph_add_data(parent, data):
     graph = graph_from_widget(parent)
     graph_from_widget(parent).append_data(data)
-
-def graph_add_point(parent):
-    graph_from_widget(parent).addPoint
-
-def graph_remove_point(parent):
-    graph_from_widget(parent).removePoint
 
 def get_plotwidget_item(parent, name = 'graph') -> PlotItem:
     """ Helper function to acquire items added to the `PlotWidget` """
@@ -166,20 +159,20 @@ class EditableGraph(pg.GraphItem):
             # don't remove the last 2 points
             return
 
-        delpos = 1
-        length = 1000
+        index = 1
+        min_len = self.getPointDistance(0, len(self.data['pos']) -1)
 
         for i in range(1, len(self.data['pos']) - 1):
-            h = self.getPointDistance(i, i + 1)
-            LOG.info(f"{i} is {h} ")
-            if (h < length):
-                delpos = i
-                length = h
+            closest = self.getPointDistance(i-1, i+1)
+            
+            if (closest < min_len):
+                index = i
+                min_len = closest
         
-        flat = self.data['pos'].tolist()
-        LOG.info(f"removePoint() index={delpos}, length={length}")
+        LOG.info(f"removePoint() index={index}, length={min_len}")
 
-        del flat[delpos]
+        flat = self.data['pos'].tolist()
+        del flat[index]
         self.setData(pos=np.stack(flat))
     def getIntersection(self, x = None, y = None):
         if (x == None) and (y == None):
