@@ -9,6 +9,10 @@ from common.graphs import InitPlotWidget, ScrollingGraph, graph_add_data
 from common.hwmonInterface import sysfm_device_hwmon_monitors, HwMon
 from common.theme import set_dark_rounded_css
 
+import logging
+
+LOG = logging.getLogger(__name__)
+
 class MonitorWindow(QtWidgets.QDialog):
     def __init__(self, hwmon: HwMon):
 
@@ -97,39 +101,31 @@ class MonitorWindow(QtWidgets.QDialog):
 
         self.centralwidget.layout().addWidget(frame)
 
-    def _get_frame_widget(self, name):
+    def _get_monitor_widget(self, base_name, ext):
 
         for i in range(1, self.centralwidget.layout().count()):
             frame = self.centralwidget.layout().itemAt(i).widget()
 
-            if (frame.objectName() == f'{name}_frame'):
-                return frame
+            if (frame.objectName() == f'{base_name}_frame'):
+                for child in frame.children():
+                    if (not hasattr(child, 'objectName')):
+                        continue
 
-        raise LookupError(f'No frame found matching {name}...')
+                    if (child.objectName() == f'{base_name}_{ext}'):
+                        return child
 
-    def _get_monitor_widget(self, base_name, ext):
-
-        for child in self._get_frame_widget(base_name).children():
-            if (not hasattr(child, 'objectName')):
-                continue
-
-            if (child.objectName() == f'{base_name}_{ext}'):
-                return child
-
-        raise LookupError(f'No child found matching {name}...')
+        raise LookupError(f'No child found matching {base_name}_{ext}...')
+        
     def append_monitor_data(self, monitor: sysfm_device_hwmon_monitors):
         
-        objects = {}
         base_attr = monitor['attribute']
         base_value = getattr(self.hwmon, base_attr)
 
-        # get the qobject frame items, temporarily store as tuple items
+        # update each widget with their respective values
         for key in ['value', 'min', 'max']:
-            objects[key] = self._get_monitor_widget(base_attr, key)
+            widget = self._get_monitor_widget(base_attr, key)
 
-        # update each qobject item with their respective values
-        for key in objects.keys():
-            if ((type(objects[key]) == PlotWidget) or (objects[key] == None)):
+            if ((type(widget) == PlotWidget) or (widget == None)):
                 continue
 
             sub_attr = '' if (key == 'value') else f'_{key}'
@@ -138,7 +134,7 @@ class MonitorWindow(QtWidgets.QDialog):
             value = getattr(self.hwmon, f'{base_attr}{sub_attr}')
 
             # update the label text
-            objects[key].setText(f"{key.title()}: {value} {monitor['unit']}")
+            widget.setText(f"{key.title()}: {value} {monitor['unit']}")
 
         # acquire graph for monitor, and update with the new value
         graph = self._get_monitor_widget(base_attr, 'plotWidget')
