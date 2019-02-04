@@ -164,13 +164,15 @@ class EditableGraph(pg.GraphItem):
         min_len = self.getPointDistance(0, len(self.data['pos']) -1)
 
         for i in range(1, len(self.data['pos']) - 1):
-            closest = self.getPointDistance(i-1, i+1)
+            closest = self.getPointDistance(i-1, i)
             
+            LOG.info(f"closest={int(closest)} min_len={int(min_len)} index={index} i={i}")
+
             if (closest < min_len):
                 index = i
                 min_len = closest
         
-        LOG.info(f"removePoint() index={index}, length={min_len}")
+        LOG.info(f"removePoint() index={index}, length={int(min_len)}")
 
         flat = self.data['pos'].tolist()
         del flat[index]
@@ -279,7 +281,7 @@ class EditableGraph(pg.GraphItem):
         ps = self.plotWidget.getViewBox().viewPixelSize()
 
         self.setCoordValues(p[0] - (ps[0] * 24), p[1] + (ps[1] * 24) )
-        self.setCoordText("(%d, %d)" % (p[0], p[1]))
+        self.setCoordText(f"({p[0]}°C, {p[1]}%)")
         
         self.updateGraph()
         event.accept()
