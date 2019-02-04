@@ -307,15 +307,14 @@ class HwMon:
         """
         for monitor in sysfm_device_hwmon_monitors:
             base_attr = monitor.value['attribute']
-            new_value = getattr(self, base_attr)
+            new_value = int(getattr(self, base_attr))
 
             for ext_attr in ['min', 'max']:
                 full_attr = f'{base_attr}_{ext_attr}'
                 
-                curr_value = getattr(self, full_attr, new_value)
+                curr_value = int(getattr(self, full_attr, new_value))
 
                 if ((ext_attr == 'min') and (new_value < curr_value)) or ((ext_attr == 'max') and (new_value > curr_value)):
-                    LOG.debug(f"{base_attr}_{ext_attr} was={curr_value} now={new_value}")
                     curr_value = new_value
 
                 setattr(self, full_attr, curr_value)
