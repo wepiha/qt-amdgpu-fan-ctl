@@ -233,9 +233,14 @@ class MainWindow(QtWidgets.QMainWindow):
         """ Refresh the user interface with data aquired from the `hwmon` interface """
         # calculate red (higher or hotter) vs green (cooler or normal) balance
 
-        r = int((self.temp1_input / self.temp1_crit) * 255)
+        base_temp = 0
+        delta = (self.temp1_input - base_temp) / (self.temp1_crit - base_temp) % 1
+
+        r = int(255 * delta)
         g = 255 - r
-        
+
+        LOG.debug(f'tdiff={self.temp1_input - base_temp}, delta={delta}, r={r}, g={g} b=255')
+
         if ( self.is_hwmon_ctrl_state_manual() ):
             color = BG_COLOR_MANUAL
             button = "Disable"
@@ -288,9 +293,14 @@ class MainWindow(QtWidgets.QMainWindow):
         if (accepted_pwm1_enable(self.hwmon.pwm1_enable) == accepted_pwm1_enable.Manual):
             self.hwmon.pwm1_enable = accepted_pwm1_enable.Auto
 
-app = QtWidgets.QApplication(sys.argv)
+def main():
+        
+    app = QtWidgets.QApplication(sys.argv)
 
-my_mainWindow = MainWindow()
-my_mainWindow.show()
+    my_mainWindow = MainWindow()
+    my_mainWindow.show()
 
-sys.exit(app.exec_())
+    app.exec()
+
+if __name__ == '__main__':
+    main()
