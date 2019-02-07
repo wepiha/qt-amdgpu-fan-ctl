@@ -80,7 +80,7 @@ class sysfs_device_hwmon(Enum):
     power1_average = "power1_average"
     in0_input = "in0_input"
 
-class sysfm_device_hwmon_monitors(Enum):
+class sysfs_device_hwmon_monitors_amdgpu(Enum):
     # FIXME: the maximum values should be acquired from hardware/other instead of fixed 
     temp1_input = {
         'attribute': 'temp1_input_degrees',
@@ -305,7 +305,7 @@ class HwMon:
         adds or updates extended min and max attributes, for those 
         devices in `sysfm_device_hwmon_monitors`
         """
-        for monitor in sysfm_device_hwmon_monitors:
+        for monitor in sysfs_device_hwmon_monitors_amdgpu:
             base_attr = monitor.value['attribute']
             new_value = int(getattr(self, base_attr))
 

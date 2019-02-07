@@ -6,7 +6,7 @@ from enum import Enum
 from PyQt5 import QtCore, QtGui, QtWidgets
 from pyqtgraph import PlotWidget
 from common.graphs import InitPlotWidget, ScrollingGraph, graph_add_data
-from common.hwmonInterface import sysfm_device_hwmon_monitors, HwMon
+from common.hwmonInterface import sysfs_device_hwmon_monitors_amdgpu, HwMon
 from common.theme import set_dark_rounded_css
 
 import logging
@@ -28,7 +28,7 @@ class MonitorWindow(QtWidgets.QDialog):
 
         self._init_layout()
 
-        for attr in sysfm_device_hwmon_monitors:
+        for attr in sysfs_device_hwmon_monitors_amdgpu:
             self._add_monitor_widget(attr.value)
         
         self.setFixedHeight(628)
@@ -116,7 +116,7 @@ class MonitorWindow(QtWidgets.QDialog):
 
         raise LookupError(f'No child found matching {base_name}_{ext}...')
         
-    def append_monitor_data(self, monitor: sysfm_device_hwmon_monitors):
+    def append_monitor_data(self, monitor: sysfs_device_hwmon_monitors_amdgpu):
         
         base_attr = monitor['attribute']
         base_value = getattr(self.hwmon, base_attr)
@@ -144,6 +144,6 @@ class MonitorWindow(QtWidgets.QDialog):
 
         self.hwmon.update_ext_attributes()
 
-        for attr in sysfm_device_hwmon_monitors:
+        for attr in sysfs_device_hwmon_monitors_amdgpu:
             if hasattr(self.hwmon, attr.value['attribute']):
                 self.append_monitor_data(attr.value)
