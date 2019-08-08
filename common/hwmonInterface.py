@@ -63,6 +63,19 @@ class accepted_power_dpm_state(Enum):
     balanced = "balanced"
     performance = "performance"
 
+class accepted_pp_dpm_sclk(dict):
+    """
+    create a dictionary of accepted pp_dpm_sclk speeds from the current power level state 
+    """
+    def __init__(self, values: str):
+        index = 0
+        for value in str(values).splitlines():
+            self[index] = {
+                'active': ('*' in value),
+                'value': int(value[3:].replace('Mhz', '').replace('*', '').strip())
+            }
+            index += 1
+
 class sysfs_device_hwmon(Enum):
     """
     Enum class of sysfs device capabilities
@@ -502,9 +515,9 @@ class HwMon:
         """
         current power level state core clock in megahertz 
         """
-        for line in str(self.__getvalue(sysfs_device.pp_dpm_sclk)).splitlines():
-            if "*" in line:
-                return line[3:-5]
+        for sclk in accepted_pp_dpm_sclk(self.__getvalue(sysfs_device.pp_dpm_sclk)).values():
+            if sclk['active']:
+                return sclk['value']
 
     @property
     def pp_power_profile_mode(self):
@@ -529,6 +542,7 @@ class HwMon:
         """
         list of pp_power_profiles containing all data read from pp_power_profile_mode
         """
+        # FIXME: the result should be a new class that stores the values
         result = []
 
         lines = str(self.pp_power_profile_mode).splitlines()
