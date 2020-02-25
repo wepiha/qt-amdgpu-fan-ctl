@@ -108,7 +108,7 @@ class MainWindow(QtWidgets.QMainWindow):
         """
         pen = pg.mkPen('w', width=0.2, style=QtCore.Qt.DashLine)
 
-        lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name='currTemp', angle=270)
+        lineCurrTemp = pg.InfiniteLine(pos=0, pen=pen, name='currTemp', angle=90)
         lineCurrFan = pg.InfiniteLine(pos=0, pen=pen, name='currFan', angle=0)
 
         pg.InfLineLabel(lineCurrTemp, text="Temp {value}°C'", position=0.9, rotateAxis=(-1,0))
