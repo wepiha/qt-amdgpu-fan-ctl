@@ -119,7 +119,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def _init_graph_legend(self):
         """ Adds a `LegendItem` which has a `ScatterPlotItem` for both the Max Temperature and Fan Targets """
-        legendItem = pg.LegendItem()
+        legendItem = pg.LegendItem(offset=[0, 100])
         
         tempMax = pg.ScatterPlotItem(pen=pg.mkPen('#ff0000'), width=2)
         tempMax._name = 'tMax'
@@ -131,7 +131,6 @@ class MainWindow(QtWidgets.QMainWindow):
 
         legendItem.addItem(tempMax, name='GPU tMax')
         legendItem.addItem(fanTarget, name='Fan PWM')
-        legendItem.setPos(0, 100)
 
         self.ui.graphicsView.addItem(tempMax)
         self.ui.graphicsView.addItem(fanTarget)
