@@ -134,7 +134,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.ui.graphicsView.addItem(tempMax)
         self.ui.graphicsView.addItem(fanTarget)
-        self.ui.graphicsView.addItem(legendItem)
+        # self.ui.graphicsView.addItem(legendItem)
 
     def _init_styles(self):
         """ Sets the UI styles for plot and display widgets"""
