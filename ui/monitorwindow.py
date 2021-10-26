@@ -37,13 +37,13 @@ class MonitorWindow(QtWidgets.QDialog):
         self.centralwidget = QtWidgets.QWidget(self)
         self.centralwidget.setContentsMargins(0, 0, 0, 0)
 
-        layout = QtGui.QVBoxLayout(self.centralwidget)
+        layout = QtWidgets.QVBoxLayout(self.centralwidget)
         layout.addStretch()
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.centralwidget.setLayout(layout)
 
-        scroll = QtGui.QScrollArea()
+        scroll = QtWidgets.QScrollArea()
         scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         scroll.setWidgetResizable(True)
@@ -52,14 +52,14 @@ class MonitorWindow(QtWidgets.QDialog):
         scroll.setFrameShadow(QtWidgets.QFrame.Plain)
         scroll.setContentsMargins(0, 0, 0, 0)
 
-        vLayout = QtGui.QVBoxLayout(self)
+        vLayout = QtWidgets.QVBoxLayout(self)
         vLayout.addWidget(scroll)
         vLayout.setSpacing(0)
         vLayout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(vLayout)
 
     def _add_monitor_widget(self, attr):
-        frame = QtGui.QFrame(self.centralwidget)
+        frame = QtWidgets.QFrame(self.centralwidget)
         frame.setObjectName(f"{attr['attribute']}_frame")
         frame.setContentsMargins(0, 0, 0, 0)
 
